@@ -1,16 +1,22 @@
 import {
   mdiArrowUpBoldCircle,
+  mdiDotsVertical,
+  mdiLanConnect,
   mdiPuzzle,
   mdiRefresh,
+  mdiServerNetwork,
   mdiStorePlus,
 } from "@mdi/js";
 import type { CSSResultGroup, TemplateResult } from "lit";
-import { css, html, LitElement } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import memoizeOne from "memoize-one";
 import { navigate } from "../../../common/navigate";
 import { caseInsensitiveStringCompare } from "../../../common/string/compare";
 import "../../../components/ha-card";
+import "../../../components/ha-dropdown";
+import type { HaDropdownSelectEvent } from "../../../components/ha-dropdown";
+import "../../../components/ha-dropdown-item";
 import "../../../components/ha-fab";
 import "../../../components/ha-icon-button";
 import "../../../components/ha-svg-icon";
@@ -24,12 +30,18 @@ import {
   reloadHassioAddons,
 } from "../../../data/hassio/addon";
 import { extractApiErrorMessage } from "../../../data/hassio/common";
+import type { RemoteHostWithAddons } from "../../../data/hassio/remote_host";
+import {
+  fetchRemoteHostAddons,
+  fetchRemoteHosts,
+} from "../../../data/hassio/remote_host";
 import { showAlertDialog } from "../../../dialogs/generic/show-dialog-box";
 import "../../../layouts/hass-error-screen";
 import "../../../layouts/hass-loading-screen";
 import "../../../layouts/hass-subpage";
 import type { HomeAssistant, Route } from "../../../types";
 import "./components/supervisor-apps-card-content";
+import { showRemoteHostConnectDialog } from "./dialogs/remote-host/show-dialog-remote-host-connect";
 import { supervisorAppsStyle } from "./resources/supervisor-apps-style";
 
 @customElement("ha-config-apps-installed")
@@ -41,6 +53,8 @@ export class HaConfigAppsInstalled extends LitElement {
   @property({ attribute: false }) public route!: Route;
 
   @state() private _addonInfo?: HassioAddonsInfo;
+
+  @state() private _remoteHosts?: RemoteHostWithAddons[];
 
   @state() private _filter?: string;
 
@@ -87,6 +101,22 @@ export class HaConfigAppsInstalled extends LitElement {
             "ui.panel.config.apps.store.check_updates"
           )}
         ></ha-icon-button>
+        <ha-dropdown slot="toolbar-icon" @wa-select=${this._handleMenuAction}>
+          <ha-icon-button
+            .label=${this.hass.localize("ui.common.menu")}
+            .path=${mdiDotsVertical}
+            slot="trigger"
+          ></ha-icon-button>
+          <ha-dropdown-item value="add_remote">
+            <ha-svg-icon slot="start" .path=${mdiLanConnect}></ha-svg-icon>
+            Add Remote Host
+          </ha-dropdown-item>
+          <ha-dropdown-item value="manage_remote">
+            <ha-svg-icon slot="start" .path=${mdiServerNetwork}></ha-svg-icon>
+            Manage Remote Hosts
+          </ha-dropdown-item>
+        </ha-dropdown>
+
         <div class="search">
           <ha-input-search
             appearance="outlined"
@@ -96,6 +126,7 @@ export class HaConfigAppsInstalled extends LitElement {
           </ha-input-search>
         </div>
         <div class="content">
+          <!-- Local add-ons -->
           <div class="card-group">
             ${addons.length === 0
               ? html`
@@ -155,6 +186,11 @@ export class HaConfigAppsInstalled extends LitElement {
                   `
                 )}
           </div>
+
+          <!-- Remote host sections -->
+          ${this._remoteHosts?.map((host) =>
+            this._renderRemoteHostSection(host)
+          )}
         </div>
 
         <a href="/config/apps/available">
@@ -168,6 +204,58 @@ export class HaConfigAppsInstalled extends LitElement {
           </ha-fab>
         </a>
       </hass-subpage>
+    `;
+  }
+
+  private _renderRemoteHostSection(host: RemoteHostWithAddons): TemplateResult {
+    const addons = this._getAddons(host.addons ?? [], this._filter);
+
+    return html`
+      <div class="remote-section">
+        <div class="remote-header">
+          <ha-svg-icon .path=${mdiServerNetwork}></ha-svg-icon>
+          <span class="remote-name">${host.name}</span>
+          <span class="remote-chip">Remote</span>
+        </div>
+
+        ${host.addonsError
+          ? html`
+              <ha-card outlined class="remote-error">
+                <div class="card-content">${host.addonsError}</div>
+              </ha-card>
+            `
+          : addons.length === 0
+            ? nothing
+            : html`
+                <div class="card-group">
+                  ${addons.map(
+                    (addon) => html`
+                      <ha-card outlined>
+                        <div class="card-content">
+                          <supervisor-apps-card-content
+                            .hass=${this.hass}
+                            .title=${addon.name}
+                            .stage=${addon.stage}
+                            .description=${addon.description}
+                            available
+                            .showTopbar=${false}
+                            .icon=${addon.state === "started"
+                              ? mdiPuzzle
+                              : mdiPuzzle}
+                            .iconTitle=${addon.state === "started"
+                              ? "Running on remote"
+                              : "Stopped on remote"}
+                            .iconClass=${addon.state === "started"
+                              ? "running"
+                              : "stopped"}
+                          ></supervisor-apps-card-content>
+                        </div>
+                      </ha-card>
+                    `
+                  )}
+                </div>
+              `}
+      </div>
     `;
   }
 
@@ -200,6 +288,35 @@ export class HaConfigAppsInstalled extends LitElement {
       this._error =
         err.message || this.hass.localize("ui.panel.config.apps.error_loading");
     }
+    this._loadRemoteHosts();
+  }
+
+  private async _loadRemoteHosts(): Promise<void> {
+    let hosts;
+    try {
+      const result = await fetchRemoteHosts(this.hass);
+      hosts = result.hosts;
+    } catch {
+      // Remote host feature unavailable — silently skip
+      return;
+    }
+
+    const hostsWithAddons: RemoteHostWithAddons[] = await Promise.all(
+      hosts.map(async (host) => {
+        try {
+          const result = await fetchRemoteHostAddons(this.hass, host.id);
+          return { ...host, addons: result.addons };
+        } catch (err: any) {
+          return {
+            ...host,
+            addons: [],
+            addonsError: `Could not load add-ons: ${extractApiErrorMessage(err) || "unreachable"}`,
+          };
+        }
+      })
+    );
+
+    this._remoteHosts = hostsWithAddons;
   }
 
   private async _handleCheckUpdates() {
@@ -211,6 +328,19 @@ export class HaConfigAppsInstalled extends LitElement {
       });
     } finally {
       this._loadData();
+    }
+  }
+
+  private _handleMenuAction(ev: HaDropdownSelectEvent): void {
+    switch (ev.detail.item.value) {
+      case "add_remote":
+        showRemoteHostConnectDialog(this, {
+          hostConnected: () => this._loadRemoteHosts(),
+        });
+        break;
+      case "manage_remote":
+        navigate("/config/apps/remote-hosts");
+        break;
     }
   }
 
@@ -279,6 +409,41 @@ export class HaConfigAppsInstalled extends LitElement {
         );
         inset-inline-start: initial;
         z-index: 1;
+      }
+
+      .remote-section {
+        margin-top: var(--ha-space-6);
+      }
+
+      .remote-header {
+        display: flex;
+        align-items: center;
+        gap: var(--ha-space-2);
+        padding: var(--ha-space-2) 0 var(--ha-space-3);
+        color: var(--secondary-text-color);
+        font-weight: 500;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-top: 1px solid var(--divider-color);
+      }
+
+      .remote-name {
+        flex: 1;
+      }
+
+      .remote-chip {
+        font-size: 11px;
+        font-weight: 500;
+        padding: 2px 8px;
+        border-radius: 12px;
+        background: rgba(var(--rgb-primary-color), 0.12);
+        color: var(--primary-color);
+      }
+
+      .remote-error {
+        cursor: default;
+        color: var(--warning-color);
       }
     `,
   ];

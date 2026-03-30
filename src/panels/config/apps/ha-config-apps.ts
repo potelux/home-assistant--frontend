@@ -32,6 +32,10 @@ class HaConfigApps extends HassRouterPage {
         tag: "ha-config-apps-registries",
         load: () => import("./ha-config-apps-registries"),
       },
+      "remote-hosts": {
+        tag: "ha-config-apps-remote-hosts",
+        load: () => import("./ha-config-apps-remote-hosts"),
+      },
     },
   };
 

@@ -7,6 +7,7 @@ import { navigate } from "../../../common/navigate";
 import { caseInsensitiveStringCompare } from "../../../common/string/compare";
 import "../../../components/ha-card";
 import type { HassioAddonRepository } from "../../../data/hassio/addon";
+import { remoteAddonIconUrl } from "../../../data/hassio/remote_host";
 import type { StoreAddon } from "../../../data/supervisor/store";
 import type { HomeAssistant } from "../../../types";
 import "./components/supervisor-apps-card-content";
@@ -22,6 +23,9 @@ export class SupervisorAppsRepositoryEl extends LitElement {
   @property({ attribute: false }) public addons!: StoreAddon[];
 
   @property() public filter!: string;
+
+  /** When set, this repository is being shown for a remote host. */
+  @property({ attribute: "remote-host-id" }) public remoteHostId?: string;
 
   private _getAddons = memoizeOne((addons: StoreAddon[], filter?: string) => {
     if (filter) {
@@ -95,7 +99,9 @@ export class SupervisorAppsRepositoryEl extends LitElement {
                         ? "not_available"
                         : ""}
                     .iconImage=${addon.icon
-                      ? `/api/hassio/addons/${addon.slug}/icon`
+                      ? this.remoteHostId
+                        ? remoteAddonIconUrl(this.remoteHostId, addon.slug)
+                        : `/api/hassio/addons/${addon.slug}/icon`
                       : undefined}
                     .showTopbar=${addon.installed || !addon.available}
                     .topbarClass=${addon.installed
@@ -116,7 +122,14 @@ export class SupervisorAppsRepositoryEl extends LitElement {
   }
 
   private _addonTapped(ev) {
-    navigate(`/config/app/${ev.currentTarget.addon.slug}/info?store=true`);
+    const slug = ev.currentTarget.addon.slug;
+    if (this.remoteHostId) {
+      navigate(
+        `/config/remote-app/${this.remoteHostId}/${slug}/info?store=true`
+      );
+    } else {
+      navigate(`/config/app/${slug}/info?store=true`);
+    }
   }
 
   static get styles(): CSSResultGroup {

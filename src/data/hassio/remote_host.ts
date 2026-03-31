@@ -1,5 +1,6 @@
 import type { HomeAssistant } from "../../types";
 import type { HassioAddonDetails, HassioAddonInfo } from "./addon";
+import type { SupervisorStore } from "../supervisor/store";
 
 export interface RemoteHost {
   id: string;
@@ -107,3 +108,31 @@ export const fetchRemoteHostAddonLogs = (
   slug: string
 ): Promise<{ logs: string }> =>
   hass.callWS({ type: "hassio/remote/hosts/addon/logs", host_id, slug });
+
+export const fetchRemoteHostStore = (
+  hass: HomeAssistant,
+  host_id: string
+): Promise<SupervisorStore> =>
+  hass.callWS({ type: "hassio/remote/hosts/store", host_id });
+
+export const installRemoteHostAddon = (
+  hass: HomeAssistant,
+  host_id: string,
+  slug: string
+): Promise<void> =>
+  hass.callWS({ type: "hassio/remote/hosts/addon/install", host_id, slug });
+
+export const syncRemoteHostRepositories = (
+  hass: HomeAssistant,
+  host_id: string,
+  repo_urls: string[]
+): Promise<{ added: string[]; skipped: string[] }> =>
+  hass.callWS({
+    type: "hassio/remote/hosts/repositories/sync",
+    host_id,
+    repo_urls,
+  });
+
+/** URL for a remote addon's icon, proxied through the local HA server. */
+export const remoteAddonIconUrl = (host_id: string, slug: string): string =>
+  `/api/hassio/remote/${host_id}/addons/${slug}/icon`;

@@ -34,7 +34,10 @@ import type { RemoteHostWithAddons } from "../../../data/hassio/remote_host";
 import {
   fetchRemoteHostAddons,
   fetchRemoteHosts,
+  remoteAddonIconUrl,
+  syncRemoteHostRepositories,
 } from "../../../data/hassio/remote_host";
+import { fetchSupervisorStore } from "../../../data/supervisor/store";
 import { showAlertDialog } from "../../../dialogs/generic/show-dialog-box";
 import "../../../layouts/hass-error-screen";
 import "../../../layouts/hass-loading-screen";
@@ -259,6 +262,9 @@ export class HaConfigAppsInstalled extends LitElement {
                               : addon.state === "started"
                                 ? "running"
                                 : "stopped"}
+                            .iconImage=${addon.icon
+                              ? remoteAddonIconUrl(host.id, addon.slug)
+                              : undefined}
                           ></supervisor-apps-card-content>
                         </div>
                       </ha-card>
@@ -312,8 +318,27 @@ export class HaConfigAppsInstalled extends LitElement {
       return;
     }
 
+    // Collect local non-builtin repo URLs for sync (fire-and-forget per host)
+    let localRepoUrls: string[] = [];
+    try {
+      const store = await fetchSupervisorStore(this.hass);
+      localRepoUrls = store.repositories
+        .filter((r) => r.slug !== "core" && r.slug !== "local" && r.source)
+        .map((r) => r.source);
+    } catch {
+      // Local store unavailable in dev mode — skip sync
+    }
+
     const hostsWithAddons: RemoteHostWithAddons[] = await Promise.all(
       hosts.map(async (host) => {
+        // Sync repos in background — don't block addon display
+        if (localRepoUrls.length > 0) {
+          syncRemoteHostRepositories(this.hass, host.id, localRepoUrls).catch(
+            () => {
+              // Best-effort — ignore failures
+            }
+          );
+        }
         try {
           const result = await fetchRemoteHostAddons(this.hass, host.id);
           return { ...host, addons: result.addons };

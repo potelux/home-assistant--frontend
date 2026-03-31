@@ -1,5 +1,5 @@
-import { mdiDotsVertical } from "@mdi/js";
-import type { PropertyValues, TemplateResult } from "lit";
+import { mdiDotsVertical, mdiServerNetwork } from "@mdi/js";
+import type { PropertyValues } from "lit";
 import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import memoizeOne from "memoize-one";
@@ -9,6 +9,7 @@ import "../../../components/ha-dropdown";
 import type { HaDropdownSelectEvent } from "../../../components/ha-dropdown";
 import "../../../components/ha-dropdown-item";
 import "../../../components/ha-icon-button";
+import "../../../components/ha-svg-icon";
 import "../../../components/input/ha-input-search";
 import type {
   HassioAddonRepository,
@@ -19,6 +20,11 @@ import {
   reloadHassioAddons,
 } from "../../../data/hassio/addon";
 import { extractApiErrorMessage } from "../../../data/hassio/common";
+import type { RemoteHost } from "../../../data/hassio/remote_host";
+import {
+  fetchRemoteHostStore,
+  fetchRemoteHosts,
+} from "../../../data/hassio/remote_host";
 import type {
   StoreAddon,
   SupervisorStore,
@@ -64,6 +70,15 @@ export class HaConfigAppsAvailable extends LitElement {
 
   @state() private _filter?: string;
 
+  @state() private _remoteHosts?: RemoteHost[];
+
+  /** null = local host */
+  @state() private _selectedHostId: string | null = null;
+
+  @state() private _remoteStore?: SupervisorStore;
+
+  @state() private _remoteStoreLoading = false;
+
   public connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener(
@@ -96,7 +111,10 @@ export class HaConfigAppsAvailable extends LitElement {
       `;
     }
 
-    if (!this._store || !this._addon) {
+    const isRemote = this._selectedHostId !== null;
+    const activeStore = isRemote ? this._remoteStore : this._store;
+
+    if (!activeStore || !this._addon) {
       return html`
         <hass-loading-screen
           .hass=${this.hass}
@@ -105,15 +123,20 @@ export class HaConfigAppsAvailable extends LitElement {
       `;
     }
 
-    let repos: (TemplateResult | typeof nothing)[] = [];
+    const repos =
+      activeStore.repositories && !this._remoteStoreLoading
+        ? this._addonRepositories(
+            activeStore.repositories,
+            activeStore.addons,
+            this._filter,
+            this._selectedHostId ?? undefined
+          )
+        : [];
 
-    if (this._store.repositories) {
-      repos = this._addonRepositories(
-        this._store.repositories,
-        this._store.addons,
-        this._filter
-      );
-    }
+    const selectedHost = this._selectedHostId
+      ? this._remoteHosts?.find((h) => h.id === this._selectedHostId)
+      : null;
+    const headerSuffix = selectedHost ? ` — ${selectedHost.name}` : "";
 
     return html`
       <hass-subpage
@@ -121,8 +144,35 @@ export class HaConfigAppsAvailable extends LitElement {
         .narrow=${this.narrow}
         .route=${this.route}
         back-path="/config/apps"
-        .header=${this.hass.localize("ui.panel.config.apps.store.title")}
+        .header=${this.hass.localize("ui.panel.config.apps.store.title") +
+        headerSuffix}
       >
+        ${this._remoteHosts && this._remoteHosts.length > 0
+          ? html`
+              <ha-dropdown
+                slot="toolbar-icon"
+                @wa-select=${this._handleHostSelect}
+              >
+                <ha-icon-button
+                  .label=${"Select host"}
+                  .path=${mdiServerNetwork}
+                  slot="trigger"
+                ></ha-icon-button>
+                <ha-dropdown-item value=""> Local </ha-dropdown-item>
+                ${this._remoteHosts.map(
+                  (h) => html`
+                    <ha-dropdown-item value=${h.id}>
+                      <ha-svg-icon
+                        slot="start"
+                        .path=${mdiServerNetwork}
+                      ></ha-svg-icon>
+                      ${h.name}
+                    </ha-dropdown-item>
+                  `
+                )}
+              </ha-dropdown>
+            `
+          : nothing}
         <ha-dropdown slot="toolbar-icon" @wa-select=${this._handleAction}>
           <ha-icon-button
             .label=${this.hass.localize("ui.common.menu")}
@@ -132,26 +182,33 @@ export class HaConfigAppsAvailable extends LitElement {
           <ha-dropdown-item value="check_updates">
             ${this.hass.localize("ui.panel.config.apps.store.check_updates")}
           </ha-dropdown-item>
-          <ha-dropdown-item value="repositories">
-            ${this.hass.localize("ui.panel.config.apps.store.repositories")}
-          </ha-dropdown-item>
-          <ha-dropdown-item value="registries">
-            ${this.hass.localize("ui.panel.config.apps.store.registries")}
-          </ha-dropdown-item>
+          ${!isRemote
+            ? html`
+                <ha-dropdown-item value="repositories">
+                  ${this.hass.localize(
+                    "ui.panel.config.apps.store.repositories"
+                  )}
+                </ha-dropdown-item>
+                <ha-dropdown-item value="registries">
+                  ${this.hass.localize("ui.panel.config.apps.store.registries")}
+                </ha-dropdown-item>
+              `
+            : nothing}
         </ha-dropdown>
-        ${repos.length === 0
+        ${this._remoteStoreLoading
           ? html`<hass-loading-screen no-toolbar></hass-loading-screen>`
-          : html`
-              <div class="search">
-                <ha-input-search
-                  appearance="outlined"
-                  .value=${this._filter}
-                  @input=${this._filterChanged}
-                ></ha-input-search>
-              </div>
-
-              ${repos}
-            `}
+          : repos.length === 0
+            ? html`<hass-loading-screen no-toolbar></hass-loading-screen>`
+            : html`
+                <div class="search">
+                  <ha-input-search
+                    appearance="outlined"
+                    .value=${this._filter}
+                    @input=${this._filterChanged}
+                  ></ha-input-search>
+                </div>
+                ${repos}
+              `}
       </hass-subpage>
     `;
   }
@@ -160,7 +217,8 @@ export class HaConfigAppsAvailable extends LitElement {
     (
       repositories: HassioAddonRepository[],
       addons: StoreAddon[],
-      filter?: string
+      filter?: string,
+      remoteHostId?: string
     ) =>
       repositories.sort(sortRepos).map((repo) => {
         const filteredAddons = addons.filter(
@@ -174,11 +232,36 @@ export class HaConfigAppsAvailable extends LitElement {
                 .repo=${repo}
                 .addons=${filteredAddons}
                 .filter=${filter!}
+                .remoteHostId=${remoteHostId}
               ></supervisor-apps-repository>
             `
           : nothing;
       })
   );
+
+  private async _handleHostSelect(ev: HaDropdownSelectEvent) {
+    const hostId = ev.detail.item.value || null;
+    this._selectedHostId = hostId;
+    if (hostId) {
+      await this._loadRemoteStore(hostId);
+    }
+  }
+
+  private async _loadRemoteStore(hostId: string): Promise<void> {
+    this._remoteStoreLoading = true;
+    this._remoteStore = undefined;
+    try {
+      this._remoteStore = await fetchRemoteHostStore(this.hass, hostId);
+    } catch (err: any) {
+      showAlertDialog(this, {
+        title: "Could not load remote store",
+        text: extractApiErrorMessage(err),
+      });
+      this._selectedHostId = null;
+    } finally {
+      this._remoteStoreLoading = false;
+    }
+  }
 
   private _handleAction(ev: HaDropdownSelectEvent) {
     const action = ev.detail.item.value;
@@ -201,6 +284,10 @@ export class HaConfigAppsAvailable extends LitElement {
   }
 
   private async _refreshData() {
+    if (this._selectedHostId) {
+      await this._loadRemoteStore(this._selectedHostId);
+      return;
+    }
     try {
       await reloadHassioAddons(this.hass);
     } catch (err) {
@@ -242,6 +329,14 @@ export class HaConfigAppsAvailable extends LitElement {
         title: this.hass.localize("ui.panel.config.apps.error_loading"),
         text: this._error,
       });
+    }
+
+    // Load remote hosts for the selector (best-effort, non-blocking)
+    try {
+      const result = await fetchRemoteHosts(this.hass);
+      this._remoteHosts = result.hosts;
+    } catch {
+      this._remoteHosts = [];
     }
   }
 

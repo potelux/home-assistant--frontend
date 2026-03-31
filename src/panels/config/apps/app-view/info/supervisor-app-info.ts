@@ -62,6 +62,14 @@ import {
   uninstallHassioAddon,
   validateHassioAddonOption,
 } from "../../../../../data/hassio/addon";
+import {
+  fetchRemoteHostAddonInfo,
+  restartRemoteHostAddon,
+  setRemoteHostAddonOption,
+  startRemoteHostAddon,
+  stopRemoteHostAddon,
+  uninstallRemoteHostAddon,
+} from "../../../../../data/hassio/remote_host";
 import type { HassioStats } from "../../../../../data/hassio/common";
 import {
   extractApiErrorMessage,
@@ -115,6 +123,8 @@ class SupervisorAppInfo extends LitElement {
   @property({ type: Boolean, attribute: "control-enabled" })
   public controlEnabled = false;
 
+  @property({ attribute: "remote-host-id" }) public remoteHostId?: string;
+
   @state() private _metrics?: HassioStats;
 
   @state() private _error?: string;
@@ -158,6 +168,7 @@ class SupervisorAppInfo extends LitElement {
               .hass=${this.hass}
               .narrow=${this.narrow}
               .addon=${this.addon}
+              .remoteHostId=${this.remoteHostId}
               @update-complete=${this._updateComplete}
             ></supervisor-app-update-available-card>
           `
@@ -790,7 +801,13 @@ class SupervisorAppInfo extends LitElement {
 
   private _scheduleDataUpdate() {
     this._fetchDataTimeout = window.setTimeout(async () => {
-      const addon = await fetchHassioAddonInfo(this.hass, this.addon.slug);
+      const addon = this.remoteHostId
+        ? await fetchRemoteHostAddonInfo(
+            this.hass,
+            this.remoteHostId,
+            this.addon.slug
+          )
+        : await fetchHassioAddonInfo(this.hass, this.addon.slug);
       if (addon.state !== "startup") {
         this._fetchDataTimeout = undefined;
         this.addon = addon;
@@ -807,7 +824,11 @@ class SupervisorAppInfo extends LitElement {
   }
 
   private async _loadData(): Promise<void> {
-    if ("state" in this.addon && this.addon.state === "started") {
+    if (
+      !this.remoteHostId &&
+      "state" in this.addon &&
+      this.addon.state === "started"
+    ) {
       this._metrics = await fetchHassioStats(
         this.hass,
         `addons/${this.addon.slug}`
@@ -868,6 +889,8 @@ class SupervisorAppInfo extends LitElement {
   }
 
   private get _computeShowWebUI(): boolean | "" | null {
+    // Ingress and web UI are not accessible through the local HA for remote addons
+    if (this.remoteHostId) return false;
     return (
       !this.addon.ingress &&
       (this.addon as HassioAddonDetails).webui &&
@@ -880,6 +903,7 @@ class SupervisorAppInfo extends LitElement {
   }
 
   private get _computeShowIngressUI(): boolean {
+    if (this.remoteHostId) return false;
     return this.addon.ingress && this._computeIsRunning;
   }
 
@@ -895,6 +919,21 @@ class SupervisorAppInfo extends LitElement {
     );
   }
 
+  private async _setAddonOption(
+    data: HassioAddonSetOptionParams
+  ): Promise<void> {
+    if (this.remoteHostId) {
+      await setRemoteHostAddonOption(
+        this.hass,
+        this.remoteHostId,
+        this.addon.slug,
+        data
+      );
+    } else {
+      await setHassioAddonOption(this.hass, this.addon.slug, data);
+    }
+  }
+
   private async _startOnBootToggled(): Promise<void> {
     this._error = undefined;
     const data: HassioAddonSetOptionParams = {
@@ -902,7 +941,7 @@ class SupervisorAppInfo extends LitElement {
         (this.addon as HassioAddonDetails).boot === "auto" ? "manual" : "auto",
     };
     try {
-      await setHassioAddonOption(this.hass, this.addon.slug, data);
+      await this._setAddonOption(data);
       const eventdata = {
         success: true,
         response: undefined,
@@ -925,7 +964,7 @@ class SupervisorAppInfo extends LitElement {
       watchdog: !(this.addon as HassioAddonDetails).watchdog,
     };
     try {
-      await setHassioAddonOption(this.hass, this.addon.slug, data);
+      await this._setAddonOption(data);
       const eventdata = {
         success: true,
         response: undefined,
@@ -948,7 +987,7 @@ class SupervisorAppInfo extends LitElement {
       auto_update: !(this.addon as HassioAddonDetails).auto_update,
     };
     try {
-      await setHassioAddonOption(this.hass, this.addon.slug, data);
+      await this._setAddonOption(data);
       const eventdata = {
         success: true,
         response: undefined,
@@ -971,7 +1010,17 @@ class SupervisorAppInfo extends LitElement {
       protected: !(this.addon as HassioAddonDetails).protected,
     };
     try {
-      await setHassioAddonSecurity(this.hass, this.addon.slug, data);
+      // Protection mode is a local security setting; proxy via options for remote
+      if (this.remoteHostId) {
+        await setRemoteHostAddonOption(
+          this.hass,
+          this.remoteHostId,
+          this.addon.slug,
+          data
+        );
+      } else {
+        await setHassioAddonSecurity(this.hass, this.addon.slug, data);
+      }
       const eventdata = {
         success: true,
         response: undefined,
@@ -994,7 +1043,7 @@ class SupervisorAppInfo extends LitElement {
       ingress_panel: !(this.addon as HassioAddonDetails).ingress_panel,
     };
     try {
-      await setHassioAddonOption(this.hass, this.addon.slug, data);
+      await this._setAddonOption(data);
       const eventdata = {
         success: true,
         response: undefined,
@@ -1078,7 +1127,15 @@ class SupervisorAppInfo extends LitElement {
     button.progress = true;
 
     try {
-      await stopHassioAddon(this.hass, this.addon.slug);
+      if (this.remoteHostId) {
+        await stopRemoteHostAddon(
+          this.hass,
+          this.remoteHostId,
+          this.addon.slug
+        );
+      } else {
+        await stopHassioAddon(this.hass, this.addon.slug);
+      }
       const eventdata = {
         success: true,
         response: undefined,
@@ -1105,7 +1162,15 @@ class SupervisorAppInfo extends LitElement {
     button.progress = true;
 
     try {
-      await restartHassioAddon(this.hass, this.addon.slug);
+      if (this.remoteHostId) {
+        await restartRemoteHostAddon(
+          this.hass,
+          this.remoteHostId,
+          this.addon.slug
+        );
+      } else {
+        await restartHassioAddon(this.hass, this.addon.slug);
+      }
       const eventdata = {
         success: true,
         response: undefined,
@@ -1143,42 +1208,59 @@ class SupervisorAppInfo extends LitElement {
   private async _startClicked(ev: CustomEvent): Promise<void> {
     const button = ev.currentTarget as any;
     button.progress = true;
-    try {
-      const validate = await validateHassioAddonOption(
-        this.hass,
-        this.addon.slug
-      );
-      if (!validate.valid) {
-        await showConfirmationDialog(this, {
-          title: this.hass.localize(
-            "ui.panel.config.apps.dashboard.action_error.start_invalid_config"
-          ),
-          text: validate.message.split(" Got ")[0],
-          confirm: () => this._openConfiguration(),
-          confirmText: this.hass.localize(
-            "ui.panel.config.apps.dashboard.action_error.go_to_config"
-          ),
-          dismissText: this.hass.localize("ui.common.cancel"),
-        });
+
+    // Config validation is only possible for local addons
+    if (!this.remoteHostId) {
+      try {
+        const validate = await validateHassioAddonOption(
+          this.hass,
+          this.addon.slug
+        );
+        if (!validate.valid) {
+          await showConfirmationDialog(this, {
+            title: this.hass.localize(
+              "ui.panel.config.apps.dashboard.action_error.start_invalid_config"
+            ),
+            text: validate.message.split(" Got ")[0],
+            confirm: () => this._openConfiguration(),
+            confirmText: this.hass.localize(
+              "ui.panel.config.apps.dashboard.action_error.go_to_config"
+            ),
+            dismissText: this.hass.localize("ui.common.cancel"),
+          });
+          button.actionError();
+          button.progress = false;
+          return;
+        }
+      } catch (err: any) {
         button.actionError();
         button.progress = false;
+        showAlertDialog(this, {
+          title: this.hass.localize(
+            "ui.panel.config.apps.dashboard.action_error.validate_config"
+          ),
+          text: extractApiErrorMessage(err),
+        });
         return;
       }
-    } catch (err: any) {
-      button.actionError();
-      button.progress = false;
-      showAlertDialog(this, {
-        title: this.hass.localize(
-          "ui.panel.config.apps.dashboard.action_error.validate_config"
-        ),
-        text: extractApiErrorMessage(err),
-      });
-      return;
     }
 
     try {
-      await startHassioAddon(this.hass, this.addon.slug);
-      this.addon = await fetchHassioAddonInfo(this.hass, this.addon.slug);
+      if (this.remoteHostId) {
+        await startRemoteHostAddon(
+          this.hass,
+          this.remoteHostId,
+          this.addon.slug
+        );
+        this.addon = await fetchRemoteHostAddonInfo(
+          this.hass,
+          this.remoteHostId,
+          this.addon.slug
+        );
+      } else {
+        await startHassioAddon(this.hass, this.addon.slug);
+        this.addon = await fetchHassioAddonInfo(this.hass, this.addon.slug);
+      }
       const eventdata = {
         success: true,
         response: undefined,
@@ -1252,7 +1334,15 @@ class SupervisorAppInfo extends LitElement {
 
     this._error = undefined;
     try {
-      await uninstallHassioAddon(this.hass, this.addon.slug, removeData);
+      if (this.remoteHostId) {
+        await uninstallRemoteHostAddon(
+          this.hass,
+          this.remoteHostId,
+          this.addon.slug
+        );
+      } else {
+        await uninstallHassioAddon(this.hass, this.addon.slug, removeData);
+      }
       const eventdata = {
         success: true,
         response: undefined,

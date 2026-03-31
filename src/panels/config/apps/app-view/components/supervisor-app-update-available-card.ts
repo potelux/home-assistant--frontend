@@ -25,6 +25,7 @@ import {
   fetchHassioAddonChangelog,
   updateHassioAddon,
 } from "../../../../../data/hassio/addon";
+import { updateRemoteHostAddon } from "../../../../../data/hassio/remote_host";
 import {
   extractApiErrorMessage,
   ignoreSupervisorError,
@@ -46,6 +47,8 @@ class SupervisorAppUpdateAvailableCard extends LitElement {
   @property({ type: Boolean }) public narrow = false;
 
   @property({ attribute: false }) public addon!: HassioAddonDetails;
+
+  @property({ attribute: "remote-host-id" }) public remoteHostId?: string;
 
   @state() private _changelogContent?: string;
 
@@ -218,11 +221,19 @@ class SupervisorAppUpdateAvailableCard extends LitElement {
     this._updating = true;
 
     try {
-      await updateHassioAddon(
-        this.hass,
-        this.addon.slug,
-        this._shouldCreateBackup
-      );
+      if (this.remoteHostId) {
+        await updateRemoteHostAddon(
+          this.hass,
+          this.remoteHostId,
+          this.addon.slug
+        );
+      } else {
+        await updateHassioAddon(
+          this.hass,
+          this.addon.slug,
+          this._shouldCreateBackup
+        );
+      }
     } catch (err: any) {
       if (this.hass.connection.connected && !ignoreSupervisorError(err)) {
         this._error = extractApiErrorMessage(err);

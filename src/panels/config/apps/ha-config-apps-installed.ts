@@ -230,7 +230,11 @@ export class HaConfigAppsInstalled extends LitElement {
                 <div class="card-group">
                   ${addons.map(
                     (addon) => html`
-                      <ha-card outlined>
+                      <ha-card
+                        outlined
+                        .data=${{ hostId: host.id, addon }}
+                        @click=${this._remoteAddonTapped}
+                      >
                         <div class="card-content">
                           <supervisor-apps-card-content
                             .hass=${this.hass}
@@ -238,16 +242,23 @@ export class HaConfigAppsInstalled extends LitElement {
                             .stage=${addon.stage}
                             .description=${addon.description}
                             available
-                            .showTopbar=${false}
-                            .icon=${addon.state === "started"
-                              ? mdiPuzzle
+                            .showTopbar=${addon.update_available}
+                            topbarClass="update"
+                            .icon=${addon.update_available
+                              ? mdiArrowUpBoldCircle
                               : mdiPuzzle}
                             .iconTitle=${addon.state === "started"
-                              ? "Running on remote"
+                              ? addon.update_available
+                                ? "Update available on remote"
+                                : "Running on remote"
                               : "Stopped on remote"}
-                            .iconClass=${addon.state === "started"
-                              ? "running"
-                              : "stopped"}
+                            .iconClass=${addon.update_available
+                              ? addon.state === "started"
+                                ? "update"
+                                : "update stopped"
+                              : addon.state === "started"
+                                ? "running"
+                                : "stopped"}
                           ></supervisor-apps-card-content>
                         </div>
                       </ha-card>
@@ -347,6 +358,14 @@ export class HaConfigAppsInstalled extends LitElement {
   private _addonTapped(ev: Event): void {
     const addon = (ev.currentTarget as any).addon as HassioAddonInfo;
     navigate(`/config/app/${addon.slug}/info`);
+  }
+
+  private _remoteAddonTapped(ev: Event): void {
+    const { hostId, addon } = (ev.currentTarget as any).data as {
+      hostId: string;
+      addon: HassioAddonInfo;
+    };
+    navigate(`/config/remote-app/${hostId}/${addon.slug}/info`);
   }
 
   private _openStore(): void {

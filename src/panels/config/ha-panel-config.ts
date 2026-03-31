@@ -696,6 +696,10 @@ class HaPanelConfig extends HassRouterPage {
         tag: "ha-config-app-dashboard",
         load: () => import("./apps/ha-config-app-dashboard"),
       },
+      "remote-app": {
+        tag: "ha-config-remote-app-dashboard",
+        load: () => import("./apps/ha-config-remote-app-dashboard"),
+      },
     },
   };
 

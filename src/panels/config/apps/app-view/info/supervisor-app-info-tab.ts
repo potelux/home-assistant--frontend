@@ -21,6 +21,8 @@ class SupervisorAppInfoDashboard extends LitElement {
   @property({ type: Boolean, attribute: "control-enabled" })
   public controlEnabled = false;
 
+  @property({ attribute: "remote-host-id" }) public remoteHostId?: string;
+
   protected render(): TemplateResult {
     if (!this.addon) {
       return html`<ha-spinner></ha-spinner>`;
@@ -34,6 +36,7 @@ class SupervisorAppInfoDashboard extends LitElement {
           .hass=${this.hass}
           .addon=${this.addon}
           .controlEnabled=${this.controlEnabled}
+          .remoteHostId=${this.remoteHostId}
         ></supervisor-app-info>
       </div>
     `;

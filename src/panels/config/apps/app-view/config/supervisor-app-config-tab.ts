@@ -22,6 +22,8 @@ class SupervisorAppConfigDashboard extends LitElement {
   @property({ type: Boolean, attribute: "control-enabled" })
   public controlEnabled = false;
 
+  @property({ attribute: "remote-host-id" }) public remoteHostId?: string;
+
   protected render(): TemplateResult {
     if (!this.addon) {
       return html`<ha-spinner></ha-spinner>`;
@@ -49,6 +51,7 @@ class SupervisorAppConfigDashboard extends LitElement {
                     <supervisor-app-config
                       .hass=${this.hass}
                       .addon=${this.addon}
+                      .remoteHostId=${this.remoteHostId}
                       .disabled=${this.addon.system_managed &&
                       !this.controlEnabled}
                     ></supervisor-app-config>
@@ -59,6 +62,7 @@ class SupervisorAppConfigDashboard extends LitElement {
                     <supervisor-app-network
                       .hass=${this.hass}
                       .addon=${this.addon}
+                      .remoteHostId=${this.remoteHostId}
                       .disabled=${this.addon.system_managed &&
                       !this.controlEnabled}
                     ></supervisor-app-network>
@@ -69,6 +73,7 @@ class SupervisorAppConfigDashboard extends LitElement {
                     <supervisor-app-audio
                       .hass=${this.hass}
                       .addon=${this.addon}
+                      .remoteHostId=${this.remoteHostId}
                       .disabled=${this.addon.system_managed &&
                       !this.controlEnabled}
                     ></supervisor-app-audio>

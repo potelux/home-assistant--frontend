@@ -1,5 +1,6 @@
 import type { HomeAssistant } from "../../types";
 import type { HassioAddonDetails, HassioAddonInfo } from "./addon";
+import type { HassioHardwareAudioDevice } from "./hardware";
 import type { SupervisorStore } from "../supervisor/store";
 
 export interface RemoteHost {
@@ -101,6 +102,16 @@ export const setRemoteHostAddonOption = (
     slug,
     options,
   });
+
+export const fetchRemoteHostHardwareAudio = (
+  hass: HomeAssistant,
+  host_id: string
+): Promise<{
+  audio: {
+    input: Record<string, string>;
+    output: Record<string, string>;
+  };
+}> => hass.callWS({ type: "hassio/remote/hosts/hardware/audio", host_id });
 
 export const fetchRemoteHostAddonDocumentation = (
   hass: HomeAssistant,

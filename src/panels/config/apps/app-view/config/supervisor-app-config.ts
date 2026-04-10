@@ -30,6 +30,7 @@ import {
   validateHassioAddonOption,
 } from "../../../../../data/hassio/addon";
 import { extractApiErrorMessage } from "../../../../../data/hassio/common";
+import { setRemoteHostAddonOption } from "../../../../../data/hassio/remote_host";
 import type { ObjectSelector, Selector } from "../../../../../data/selector";
 import { showConfirmationDialog } from "../../../../../dialogs/generic/show-dialog-box";
 import { haStyle } from "../../../../../resources/styles";
@@ -62,6 +63,8 @@ class SupervisorAppConfig extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
   @property({ type: Boolean }) public disabled = false;
+
+  @property({ attribute: "remote-host-id" }) public remoteHostId?: string;
 
   @state() private _configHasChanged = false;
 
@@ -449,7 +452,16 @@ class SupervisorAppConfig extends LitElement {
       options: null,
     };
     try {
-      await setHassioAddonOption(this.hass, this.addon.slug, data);
+      if (this.remoteHostId) {
+        await setRemoteHostAddonOption(
+          this.hass,
+          this.remoteHostId,
+          this.addon.slug,
+          { options: null }
+        );
+      } else {
+        await setHassioAddonOption(this.hass, this.addon.slug, data);
+      }
       this._configHasChanged = false;
       const eventdata = {
         success: true,
@@ -495,9 +507,18 @@ class SupervisorAppConfig extends LitElement {
       if (!validation.valid) {
         throw Error(validation.message);
       }
-      await setHassioAddonOption(this.hass, this.addon.slug, {
-        options,
-      });
+      if (this.remoteHostId) {
+        await setRemoteHostAddonOption(
+          this.hass,
+          this.remoteHostId,
+          this.addon.slug,
+          { options }
+        );
+      } else {
+        await setHassioAddonOption(this.hass, this.addon.slug, {
+          options,
+        });
+      }
 
       this._configHasChanged = false;
       if (this.addon?.state === "started") {

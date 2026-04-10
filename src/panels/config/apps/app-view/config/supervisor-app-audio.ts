@@ -13,6 +13,10 @@ import type {
 import { setHassioAddonOption } from "../../../../../data/hassio/addon";
 import type { HassioHardwareAudioDevice } from "../../../../../data/hassio/hardware";
 import { fetchHassioHardwareAudio } from "../../../../../data/hassio/hardware";
+import {
+  fetchRemoteHostHardwareAudio,
+  setRemoteHostAddonOption,
+} from "../../../../../data/hassio/remote_host";
 import { haStyle } from "../../../../../resources/styles";
 import type { HomeAssistant } from "../../../../../types";
 import { supervisorAppsStyle } from "../../resources/supervisor-apps-style";
@@ -25,6 +29,8 @@ class SupervisorAppAudio extends LitElement {
   @property({ attribute: false }) public addon!: HassioAddonDetails;
 
   @property({ type: Boolean }) public disabled = false;
+
+  @property({ attribute: "remote-host-id" }) public remoteHostId?: string;
 
   @state() private _error?: string;
 
@@ -146,7 +152,9 @@ class SupervisorAppAudio extends LitElement {
     };
 
     try {
-      const { audio } = await fetchHassioHardwareAudio(this.hass);
+      const { audio } = this.remoteHostId
+        ? await fetchRemoteHostHardwareAudio(this.hass, this.remoteHostId)
+        : await fetchHassioHardwareAudio(this.hass);
       const input = Object.keys(audio.input).map((key) => ({
         device: key,
         name: audio.input[key],
@@ -183,7 +191,16 @@ class SupervisorAppAudio extends LitElement {
         this._selectedOutput === "default" ? null : this._selectedOutput,
     };
     try {
-      await setHassioAddonOption(this.hass, this.addon.slug, data);
+      if (this.remoteHostId) {
+        await setRemoteHostAddonOption(
+          this.hass,
+          this.remoteHostId,
+          this.addon.slug,
+          data
+        );
+      } else {
+        await setHassioAddonOption(this.hass, this.addon.slug, data);
+      }
       if (this.addon?.state === "started") {
         await suggestSupervisorAppRestart(this, this.hass, this.addon);
       }

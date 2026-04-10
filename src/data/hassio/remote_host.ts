@@ -102,12 +102,16 @@ export const setRemoteHostAddonOption = (
     options,
   });
 
-export const fetchRemoteHostAddonLogs = (
+export const fetchRemoteHostAddonDocumentation = (
   hass: HomeAssistant,
   host_id: string,
   slug: string
-): Promise<{ logs: string }> =>
-  hass.callWS({ type: "hassio/remote/hosts/addon/logs", host_id, slug });
+): Promise<{ documentation: string }> =>
+  hass.callWS({
+    type: "hassio/remote/hosts/addon/documentation",
+    host_id,
+    slug,
+  });
 
 export const fetchRemoteHostStore = (
   hass: HomeAssistant,
@@ -136,3 +140,7 @@ export const syncRemoteHostRepositories = (
 /** URL for a remote addon's icon, proxied through the local HA server. */
 export const remoteAddonIconUrl = (host_id: string, slug: string): string =>
   `/api/hassio/remote/${host_id}/addons/${slug}/icon`;
+
+/** URL for a remote addon's logo, proxied through the local HA server. */
+export const remoteAddonLogoUrl = (host_id: string, slug: string): string =>
+  `/api/hassio/remote/${host_id}/addons/${slug}/logo`;

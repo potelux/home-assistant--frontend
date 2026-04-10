@@ -8,6 +8,7 @@ import { customElement, property, state } from "lit/decorators";
 import type { HassioAddonDetails } from "../../../../../data/hassio/addon";
 import { fetchHassioAddonDocumentation } from "../../../../../data/hassio/addon";
 import { extractApiErrorMessage } from "../../../../../data/hassio/common";
+import { fetchRemoteHostAddonDocumentation } from "../../../../../data/hassio/remote_host";
 import "../../../../../layouts/hass-loading-screen";
 import { haStyle } from "../../../../../resources/styles";
 import type { HomeAssistant } from "../../../../../types";
@@ -18,6 +19,8 @@ class SupervisorAppDocumentationDashboard extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
   @property({ attribute: false }) public addon?: HassioAddonDetails;
+
+  @property({ attribute: "remote-host-id" }) public remoteHostId?: string;
 
   @state() private _error?: string;
 
@@ -75,10 +78,19 @@ class SupervisorAppDocumentationDashboard extends LitElement {
   private async _loadData(): Promise<void> {
     this._error = undefined;
     try {
-      this._content = await fetchHassioAddonDocumentation(
-        this.hass,
-        this.addon!.slug
-      );
+      if (this.remoteHostId) {
+        const result = await fetchRemoteHostAddonDocumentation(
+          this.hass,
+          this.remoteHostId,
+          this.addon!.slug
+        );
+        this._content = result.documentation;
+      } else {
+        this._content = await fetchHassioAddonDocumentation(
+          this.hass,
+          this.addon!.slug
+        );
+      }
     } catch (err: any) {
       this._error = this.hass.localize(
         "ui.panel.config.apps.documentation.get_documentation",

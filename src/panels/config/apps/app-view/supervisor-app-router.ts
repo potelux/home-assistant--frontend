@@ -23,6 +23,8 @@ class SupervisorAppRouter extends HassRouterPage {
   @property({ type: Boolean, attribute: "control-enabled" })
   public controlEnabled = false;
 
+  @property({ attribute: "remote-host-id" }) public remoteHostId?: string;
+
   protected routerOptions: RouterOptions = {
     defaultPage: "info",
     showLoading: true,
@@ -48,6 +50,7 @@ class SupervisorAppRouter extends HassRouterPage {
     el.addon = this.addon;
     el.narrow = this.narrow;
     el.controlEnabled = this.controlEnabled;
+    el.remoteHostId = this.remoteHostId;
   }
 }
 

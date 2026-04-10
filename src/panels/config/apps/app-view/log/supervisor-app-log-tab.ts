@@ -21,6 +21,8 @@ class SupervisorAppLogDashboard extends LitElement {
 
   @property({ attribute: false }) public addon?: HassioAddonDetails;
 
+  @property({ attribute: "remote-host-id" }) public remoteHostId?: string;
+
   @state() private _filter = extractSearchParam("filter") || "";
 
   protected render(): TemplateResult {
@@ -42,6 +44,7 @@ class SupervisorAppLogDashboard extends LitElement {
           .header=${this.addon.name}
           .provider=${this.addon.slug}
           .filter=${this._filter}
+          .remoteHostId=${this.remoteHostId}
         >
         </error-log-card>
       </div>

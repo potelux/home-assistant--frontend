@@ -252,12 +252,6 @@ class HaConfigAppDashboard extends LitElement {
         :host {
           color: var(--primary-text-color);
         }
-        .content {
-          padding: var(--ha-space-6) 0 var(--ha-space-8);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
       `,
     ];
   }

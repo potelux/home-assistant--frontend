@@ -1,4 +1,4 @@
-import { mdiInformationVariant, mdiTextBoxOutline } from "@mdi/js";
+import { mdiCogs, mdiFileDocument, mdiInformationVariant, mdiTextBoxOutline } from "@mdi/js";
 import type { CSSResultGroup, PropertyValues, TemplateResult } from "lit";
 import { css, html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators";
@@ -14,7 +14,7 @@ import type { PageNavigation } from "../../../layouts/hass-tabs-subpage";
 import { haStyle } from "../../../resources/styles";
 import type { HomeAssistant, Route } from "../../../types";
 
-import "./app-view/supervisor-remote-app-router";
+import "./app-view/supervisor-app-router";
 
 @customElement("ha-config-remote-app-dashboard")
 class HaConfigRemoteAppDashboard extends LitElement {
@@ -101,7 +101,20 @@ class HaConfigRemoteAppDashboard extends LitElement {
       },
     ];
 
+    if (this._addon.documentation) {
+      addonTabs.push({
+        translationKey: "ui.panel.config.apps.panel.documentation",
+        path: `/config/remote-app/${this._hostId}/${this._addon.slug}/documentation`,
+        iconPath: mdiFileDocument,
+      });
+    }
+
     if (this._addon.version) {
+      addonTabs.push({
+        translationKey: "ui.panel.config.apps.panel.configuration",
+        path: `/config/remote-app/${this._hostId}/${this._addon.slug}/config`,
+        iconPath: mdiCogs,
+      });
       addonTabs.push({
         translationKey: "ui.panel.config.apps.panel.log",
         path: `/config/remote-app/${this._hostId}/${this._addon.slug}/logs`,
@@ -120,13 +133,13 @@ class HaConfigRemoteAppDashboard extends LitElement {
         back-path="/config/apps"
       >
         <span slot="header">${this._addon.name}</span>
-        <supervisor-remote-app-router
+        <supervisor-app-router
           .route=${route}
           .narrow=${this.narrow}
           .hass=${this.hass}
           .addon=${this._addon}
           .remoteHostId=${this._hostId}
-        ></supervisor-remote-app-router>
+        ></supervisor-app-router>
       </hass-tabs-subpage>
     `;
   }

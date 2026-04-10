@@ -180,9 +180,7 @@ export class HaConfigAppsInstalled extends LitElement {
                             : addon.state === "started"
                               ? "running"
                               : "stopped"}
-                          .iconImage=${addon.icon
-                            ? `/api/hassio/addons/${addon.slug}/icon`
-                            : undefined}
+                          .iconImage=${`/api/hassio/addons/${addon.slug}/icon`}
                         ></supervisor-apps-card-content>
                       </div>
                     </ha-card>
@@ -262,9 +260,7 @@ export class HaConfigAppsInstalled extends LitElement {
                               : addon.state === "started"
                                 ? "running"
                                 : "stopped"}
-                            .iconImage=${addon.icon
-                              ? remoteAddonIconUrl(host.id, addon.slug)
-                              : undefined}
+                            .iconImage=${remoteAddonIconUrl(host.id, addon.slug)}
                           ></supervisor-apps-card-content>
                         </div>
                       </ha-card>

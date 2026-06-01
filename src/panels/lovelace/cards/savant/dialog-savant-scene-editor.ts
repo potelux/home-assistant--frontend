@@ -1,13 +1,7 @@
-import {
-  mdiClose,
-  mdiContentSave,
-  mdiDelete,
-  mdiPlus,
-  mdiRefresh,
-} from "@mdi/js";
+import { mdiClose, mdiContentSave, mdiDelete, mdiRefresh } from "@mdi/js";
 import "@material/mwc-list/mwc-list";
-import { HassEntity } from "home-assistant-js-websocket";
-import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
+import type { HassEntity } from "home-assistant-js-websocket";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../../../../common/dom/fire_event";
 import { computeDomain } from "../../../../common/entity/compute_domain";
@@ -23,17 +17,16 @@ import "../../../../components/ha-icon-picker";
 import "../../../../components/ha-list-item";
 import "../../../../components/ha-state-icon";
 import "../../../../components/ha-svg-icon";
-import "../../../../components/ha-textfield";
-import {
-  saveScene,
+import "../../../../components/input/ha-input";
+import type {
   SceneConfig,
   SceneEntities,
   SceneEntity,
   SceneMetaData,
-  SCENE_IGNORED_DOMAINS,
 } from "../../../../data/scene";
-import { updateEntityRegistryEntry } from "../../../../data/entity_registry";
-import { HomeAssistant } from "../../../../types";
+import { saveScene, SCENE_IGNORED_DOMAINS } from "../../../../data/scene";
+import { updateEntityRegistryEntry } from "../../../../data/entity/entity_registry";
+import type { HomeAssistant } from "../../../../types";
 import { showToast } from "../../../../util/toast";
 import type { SavantSceneEditorDialogParams } from "./show-dialog-savant-scene-editor";
 
@@ -67,12 +60,13 @@ class DialogSavantSceneEditor extends LitElement {
         : [];
   }
 
-  public closeDialog(): boolean | void {
+  public closeDialog(): boolean {
     if (this._saving) {
       return false;
     }
     this._params = undefined;
     fireEvent(this, "dialog-closed", { dialog: this.localName });
+    return true;
   }
 
   protected render() {
@@ -120,12 +114,12 @@ class DialogSavantSceneEditor extends LitElement {
 
           <ha-card outlined>
             <div class="card-content form">
-              <ha-textfield
+              <ha-input
                 .label=${"Scene name"}
                 .value=${this._name}
                 @input=${this._nameChanged}
                 required
-              ></ha-textfield>
+              ></ha-input>
               <ha-icon-picker
                 .hass=${hass}
                 .label=${"Icon"}
@@ -381,53 +375,51 @@ class DialogSavantSceneEditor extends LitElement {
     });
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      ha-dialog {
-        --mdc-dialog-max-width: 720px;
-      }
-      .content {
-        display: grid;
-        gap: 16px;
-      }
-      .intro,
-      .warning,
-      .empty,
-      h3,
-      p {
-        margin: 0;
-      }
-      .warning {
-        color: var(--error-color);
-      }
-      .form {
-        display: grid;
-        gap: 16px;
-      }
-      .section-header {
-        align-items: center;
-        display: flex;
-        gap: 16px;
-        justify-content: space-between;
-        margin-bottom: 16px;
-      }
-      .section-header p {
-        color: var(--secondary-text-color);
-        margin-top: 4px;
-      }
-      ha-entity-picker {
-        display: block;
-        margin-bottom: 8px;
-      }
-      ha-list-item {
-        --mdc-list-item-meta-size: 40px;
-      }
-      .empty {
-        color: var(--secondary-text-color);
-        padding: 16px 0 0;
-      }
-    `;
-  }
+  static styles = css`
+    ha-dialog {
+      --mdc-dialog-max-width: 720px;
+    }
+    .content {
+      display: grid;
+      gap: 16px;
+    }
+    .intro,
+    .warning,
+    .empty,
+    h3,
+    p {
+      margin: 0;
+    }
+    .warning {
+      color: var(--error-color);
+    }
+    .form {
+      display: grid;
+      gap: 16px;
+    }
+    .section-header {
+      align-items: center;
+      display: flex;
+      gap: 16px;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .section-header p {
+      color: var(--secondary-text-color);
+      margin-top: 4px;
+    }
+    ha-entity-picker {
+      display: block;
+      margin-bottom: 8px;
+    }
+    ha-list-item {
+      --mdc-list-item-meta-size: 40px;
+    }
+    .empty {
+      color: var(--secondary-text-color);
+      padding: 16px 0 0;
+    }
+  `;
 }
 
 declare global {

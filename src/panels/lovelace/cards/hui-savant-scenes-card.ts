@@ -1,5 +1,5 @@
 import { mdiPlus, mdiPlay } from "@mdi/js";
-import { css, CSSResultGroup, html, LitElement, nothing } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { computeDomain } from "../../../common/entity/compute_domain";
 import { computeStateName } from "../../../common/entity/compute_state_name";
@@ -7,15 +7,11 @@ import "../../../components/ha-button";
 import "../../../components/ha-card";
 import "../../../components/ha-state-icon";
 import "../../../components/ha-svg-icon";
-import {
-  activateScene,
-  getSceneConfig,
-  SceneConfig,
-  SceneEntity,
-} from "../../../data/scene";
-import { HomeAssistant } from "../../../types";
+import type { SceneConfig, SceneEntity } from "../../../data/scene";
+import { activateScene, getSceneConfig } from "../../../data/scene";
+import type { HomeAssistant } from "../../../types";
 import { showToast } from "../../../util/toast";
-import { LovelaceCard } from "../types";
+import type { LovelaceCard } from "../types";
 import { showSavantSceneEditorDialog } from "./savant/show-dialog-savant-scene-editor";
 import type { LovelaceCardConfig } from "../../../data/lovelace/config/card";
 
@@ -145,7 +141,7 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
   private _renderScene(scene: SceneEntity) {
     const capturedEntities = this._capturedEntities(scene);
     return html`
-      <div class="scene" @click=${() => this._activateScene(scene)}>
+      <div class="scene" .scene=${scene} @click=${this._activateScene}>
         <ha-state-icon .hass=${this.hass} .stateObj=${scene}></ha-state-icon>
         <div class="scene-info">
           <div class="scene-name">${computeStateName(scene)}</div>
@@ -226,80 +222,80 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
     });
   }
 
-  private async _activateScene(scene: SceneEntity): Promise<void> {
+  private async _activateScene(ev: Event): Promise<void> {
+    const scene = (ev.currentTarget as HTMLElement & { scene: SceneEntity })
+      .scene;
     await activateScene(this.hass, scene.entity_id);
     showToast(this, { message: `${computeStateName(scene)} activated` });
   }
 
-  static get styles(): CSSResultGroup {
-    return css`
-      .header {
-        align-items: center;
-        display: flex;
-        gap: 16px;
-        justify-content: space-between;
-        padding: 20px 20px 8px;
-      }
-      h2,
-      h3,
-      p {
-        margin: 0;
-      }
-      h2 {
-        font-size: 24px;
-        font-weight: 500;
-      }
-      h3 {
-        color: var(--secondary-text-color);
-        font-size: 14px;
-        font-weight: 500;
-        margin: 16px 0 8px;
-        text-transform: uppercase;
-      }
-      p,
-      .scene-meta,
-      .empty {
-        color: var(--secondary-text-color);
-      }
-      .content {
-        padding: 0 12px 12px;
-      }
-      .group:first-child h3 {
-        margin-top: 8px;
-      }
-      .scene {
-        align-items: center;
-        border-radius: 16px;
-        cursor: pointer;
-        display: grid;
-        gap: 12px;
-        grid-template-columns: 40px 1fr auto 32px;
-        min-height: 56px;
-        padding: 10px 8px;
-      }
-      .scene:hover {
-        background: var(--secondary-background-color);
-      }
-      .scene-name {
-        font-weight: 500;
-      }
-      .entities {
-        display: flex;
-        gap: 4px;
-      }
-      .entities ha-state-icon {
-        color: var(--secondary-text-color);
-        height: 20px;
-        width: 20px;
-      }
-      .play {
-        color: var(--secondary-text-color);
-      }
-      .empty {
-        padding: 16px 8px 20px;
-      }
-    `;
-  }
+  static styles = css`
+    .header {
+      align-items: center;
+      display: flex;
+      gap: 16px;
+      justify-content: space-between;
+      padding: 20px 20px 8px;
+    }
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+    h2 {
+      font-size: 24px;
+      font-weight: 500;
+    }
+    h3 {
+      color: var(--secondary-text-color);
+      font-size: 14px;
+      font-weight: 500;
+      margin: 16px 0 8px;
+      text-transform: uppercase;
+    }
+    p,
+    .scene-meta,
+    .empty {
+      color: var(--secondary-text-color);
+    }
+    .content {
+      padding: 0 12px 12px;
+    }
+    .group:first-child h3 {
+      margin-top: 8px;
+    }
+    .scene {
+      align-items: center;
+      border-radius: 16px;
+      cursor: pointer;
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 40px 1fr auto 32px;
+      min-height: 56px;
+      padding: 10px 8px;
+    }
+    .scene:hover {
+      background: var(--secondary-background-color);
+    }
+    .scene-name {
+      font-weight: 500;
+    }
+    .entities {
+      display: flex;
+      gap: 4px;
+    }
+    .entities ha-state-icon {
+      color: var(--secondary-text-color);
+      height: 20px;
+      width: 20px;
+    }
+    .play {
+      color: var(--secondary-text-color);
+    }
+    .empty {
+      padding: 16px 8px 20px;
+    }
+  `;
 }
 
 declare global {

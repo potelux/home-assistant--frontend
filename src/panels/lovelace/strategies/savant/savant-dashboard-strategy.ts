@@ -3,11 +3,11 @@ import { customElement } from "lit/decorators";
 import { computeDomain } from "../../../../common/entity/compute_domain";
 import { computeStateName } from "../../../../common/entity/compute_state_name";
 import { stringCompare } from "../../../../common/string/compare";
-import { LovelaceCardConfig } from "../../../../data/lovelace/config/card";
-import { LovelaceStrategyConfig } from "../../../../data/lovelace/config/strategy";
-import { LovelaceConfig } from "../../../../data/lovelace/config/types";
-import { LovelaceViewConfig } from "../../../../data/lovelace/config/view";
-import { HomeAssistant } from "../../../../types";
+import type { LovelaceCardConfig } from "../../../../data/lovelace/config/card";
+import type { LovelaceStrategyConfig } from "../../../../data/lovelace/config/strategy";
+import type { LovelaceConfig } from "../../../../data/lovelace/config/types";
+import type { LovelaceViewConfig } from "../../../../data/lovelace/config/view";
+import type { HomeAssistant } from "../../../../types";
 
 type SavantDashboardStrategyConfig = LovelaceStrategyConfig & {
   type: "savant";
@@ -352,7 +352,6 @@ export class SavantDashboardStrategy extends ReactiveElement {
     );
 
     return {
-      title: config.title || hass.config.location_name,
       views: [
         homeView(hass, config, serviceDomains),
         roomsView(hass, roomDomains),

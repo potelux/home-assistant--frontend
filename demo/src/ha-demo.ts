@@ -13,6 +13,7 @@ import { mockDeviceRegistry } from "./stubs/device_registry";
 import { mockEnergy } from "./stubs/energy";
 import { energyEntities } from "./stubs/entities";
 import { mockEntityRegistry } from "./stubs/entity_registry";
+import { mockScene } from "./stubs/scene";
 import { mockEvents } from "./stubs/events";
 import { mockFloorRegistry } from "./stubs/floor_registry";
 import { mockFrontend } from "./stubs/frontend";
@@ -66,6 +67,7 @@ export class HaDemo extends HomeAssistantAppEl {
     mockDeviceRegistry(hass);
     mockFloorRegistry(hass);
     mockLabelRegistry(hass);
+    mockScene(hass);
     mockEntityRegistry(hass, [
       {
         config_entry_id: "co2signal",

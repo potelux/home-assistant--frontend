@@ -1,6 +1,7 @@
-import { mdiClose, mdiContentSave, mdiDelete, mdiRefresh } from "@mdi/js";
+import { mdiContentSave, mdiDelete, mdiRefresh } from "@mdi/js";
 import "@material/mwc-list/mwc-list";
 import type { HassEntity } from "home-assistant-js-websocket";
+import type { CSSResultGroup } from "lit";
 import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../../../../common/dom/fire_event";
@@ -11,7 +12,7 @@ import "../../../../components/ha-area-picker";
 import "../../../../components/ha-button";
 import "../../../../components/ha-card";
 import "../../../../components/ha-dialog";
-import "../../../../components/ha-dialog-header";
+import "../../../../components/ha-dialog-footer";
 import "../../../../components/ha-icon-button";
 import "../../../../components/ha-icon-picker";
 import "../../../../components/ha-list-item";
@@ -26,6 +27,8 @@ import type {
 } from "../../../../data/scene";
 import { saveScene, SCENE_IGNORED_DOMAINS } from "../../../../data/scene";
 import { updateEntityRegistryEntry } from "../../../../data/entity/entity_registry";
+import type { HassDialog } from "../../../../dialogs/make-dialog-manager";
+import { haStyleDialog } from "../../../../resources/styles";
 import type { HomeAssistant } from "../../../../types";
 import { showToast } from "../../../../util/toast";
 import type { SavantSceneEditorDialogParams } from "./show-dialog-savant-scene-editor";
@@ -33,10 +36,15 @@ import type { SavantSceneEditorDialogParams } from "./show-dialog-savant-scene-e
 const WAIT_FOR_SCENE_TIMEOUT = 3000;
 
 @customElement("dialog-savant-scene-editor")
-class DialogSavantSceneEditor extends LitElement {
+class DialogSavantSceneEditor
+  extends LitElement
+  implements HassDialog<SavantSceneEditorDialogParams>
+{
   @property({ attribute: false }) public hass!: HomeAssistant;
 
   @state() private _params?: SavantSceneEditorDialogParams;
+
+  @state() private _open = false;
 
   @state() private _name = "";
 
@@ -50,6 +58,7 @@ class DialogSavantSceneEditor extends LitElement {
 
   public showDialog(params: SavantSceneEditorDialogParams): void {
     this._params = params;
+    this._open = true;
     this._name = "";
     this._icon = "mdi:palette";
     this._area = params.area;
@@ -64,13 +73,18 @@ class DialogSavantSceneEditor extends LitElement {
     if (this._saving) {
       return false;
     }
-    this._params = undefined;
-    fireEvent(this, "dialog-closed", { dialog: this.localName });
+    this._open = false;
     return true;
   }
 
+  private _dialogClosed(): void {
+    this._open = false;
+    this._params = undefined;
+    fireEvent(this, "dialog-closed", { dialog: this.localName });
+  }
+
   protected render() {
-    if (!this._params) {
+    if (!this._params || !this._open) {
       return nothing;
     }
 
@@ -79,26 +93,15 @@ class DialogSavantSceneEditor extends LitElement {
       Boolean(this._name.trim()) &&
       this._entities.length > 0 &&
       !this._saving &&
-      hass.user?.is_admin;
+      Boolean(hass.user?.is_admin);
 
     return html`
       <ha-dialog
-        open
-        @closed=${this.closeDialog}
-        .heading=${"Create scene"}
-        scrimClickAction
-        escapeKeyAction
+        .open=${this._open}
+        header-title="Create scene"
+        width="large"
+        @closed=${this._dialogClosed}
       >
-        <ha-dialog-header slot="heading">
-          <ha-icon-button
-            slot="navigationIcon"
-            dialogAction="cancel"
-            .label=${"Close"}
-            .path=${mdiClose}
-          ></ha-icon-button>
-          <span slot="title">Create scene</span>
-        </ha-dialog-header>
-
         <div class="content">
           <p class="intro">
             Capture the current state of selected rooms and entities without
@@ -115,10 +118,11 @@ class DialogSavantSceneEditor extends LitElement {
           <ha-card outlined>
             <div class="card-content form">
               <ha-input
+                dialogInitialFocus
                 .label=${"Scene name"}
                 .value=${this._name}
-                @input=${this._nameChanged}
                 required
+                @input=${this._nameChanged}
               ></ha-input>
               <ha-icon-picker
                 .hass=${hass}
@@ -181,17 +185,24 @@ class DialogSavantSceneEditor extends LitElement {
           </ha-card>
         </div>
 
-        <ha-button slot="secondaryAction" @click=${this.closeDialog}>
-          Cancel
-        </ha-button>
-        <ha-button
-          slot="primaryAction"
-          @click=${this._save}
-          .disabled=${!canSave}
-        >
-          <ha-svg-icon slot="icon" .path=${mdiContentSave}></ha-svg-icon>
-          ${this._saving ? "Saving..." : "Save scene"}
-        </ha-button>
+        <ha-dialog-footer slot="footer">
+          <ha-button
+            slot="secondaryAction"
+            appearance="plain"
+            @click=${this.closeDialog}
+            .disabled=${this._saving}
+          >
+            Cancel
+          </ha-button>
+          <ha-button
+            slot="primaryAction"
+            @click=${this._save}
+            .disabled=${!canSave}
+          >
+            <ha-svg-icon slot="icon" .path=${mdiContentSave}></ha-svg-icon>
+            ${this._saving ? "Saving..." : "Save scene"}
+          </ha-button>
+        </ha-dialog-footer>
       </ha-dialog>
     `;
   }
@@ -310,7 +321,7 @@ class DialogSavantSceneEditor extends LitElement {
 
   private async _save(): Promise<void> {
     const hass = this.hass || this._params!.hass;
-    if (!hass.user?.is_admin) {
+    if (!hass.user?.is_admin || !this._name.trim() || !this._entities.length) {
       return;
     }
 
@@ -331,6 +342,7 @@ class DialogSavantSceneEditor extends LitElement {
       showToast(this, { message: "Scene saved" });
       this._saving = false;
       this.closeDialog();
+      this._dialogClosed();
     } catch (err: any) {
       this._saving = false;
       showToast(this, {
@@ -375,51 +387,53 @@ class DialogSavantSceneEditor extends LitElement {
     });
   }
 
-  static styles = css`
-    ha-dialog {
-      --mdc-dialog-max-width: 720px;
-    }
-    .content {
-      display: grid;
-      gap: 16px;
-    }
-    .intro,
-    .warning,
-    .empty,
-    h3,
-    p {
-      margin: 0;
-    }
-    .warning {
-      color: var(--error-color);
-    }
-    .form {
-      display: grid;
-      gap: 16px;
-    }
-    .section-header {
-      align-items: center;
-      display: flex;
-      gap: 16px;
-      justify-content: space-between;
-      margin-bottom: 16px;
-    }
-    .section-header p {
-      color: var(--secondary-text-color);
-      margin-top: 4px;
-    }
-    ha-entity-picker {
-      display: block;
-      margin-bottom: 8px;
-    }
-    ha-list-item {
-      --mdc-list-item-meta-size: 40px;
-    }
-    .empty {
-      color: var(--secondary-text-color);
-      padding: 16px 0 0;
-    }
-  `;
+  static get styles(): CSSResultGroup[] {
+    return [
+      haStyleDialog,
+      css`
+        .content {
+          display: grid;
+          gap: 16px;
+        }
+        .intro,
+        .warning,
+        .empty,
+        h3,
+        p {
+          margin: 0;
+        }
+        .warning {
+          color: var(--error-color);
+        }
+        .form {
+          display: grid;
+          gap: 16px;
+        }
+        .section-header {
+          align-items: center;
+          display: flex;
+          gap: 16px;
+          justify-content: space-between;
+          margin-bottom: 16px;
+        }
+        .section-header p {
+          color: var(--secondary-text-color);
+          margin-top: 4px;
+        }
+        ha-entity-picker {
+          display: block;
+          margin-bottom: 8px;
+        }
+        ha-list-item {
+          --mdc-list-item-meta-size: 40px;
+        }
+        .empty {
+          color: var(--secondary-text-color);
+          padding: 16px 0 0;
+        }
+      `,
+    ];
+  }
 }
 
 declare global {

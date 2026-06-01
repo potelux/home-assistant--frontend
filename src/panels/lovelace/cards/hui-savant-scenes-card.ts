@@ -69,12 +69,10 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
           ${this._config.show_create
             ? html`
                 <ha-button
-                  appearance="plain"
-                  size="small"
                   @click=${this._createScene}
                   .disabled=${!this.hass.user?.is_admin}
                 >
-                  <ha-svg-icon slot="start" .path=${mdiPlus}></ha-svg-icon>
+                  <ha-svg-icon slot="icon" .path=${mdiPlus}></ha-svg-icon>
                   Create
                 </ha-button>
               `
@@ -115,7 +113,10 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
         return this._sceneArea(stateObj as SceneEntity) === this._config.area;
       })
       .sort((a, b) =>
-        computeStateName(a).localeCompare(computeStateName(b), this.hass.language)
+        computeStateName(a).localeCompare(
+          computeStateName(b),
+          this.hass.language
+        )
       ) as SceneEntity[];
   }
 

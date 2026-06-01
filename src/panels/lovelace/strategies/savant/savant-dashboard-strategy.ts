@@ -348,8 +348,8 @@ export class SavantDashboardStrategy extends ReactiveElement {
     const serviceDomains = config.service_domains || DEFAULT_SERVICE_DOMAINS;
     const roomDomains = config.room_entity_domains || DEFAULT_ROOM_DOMAINS;
     const areaIds = Object.keys(hass.areas).sort((a, b) =>
-    compareAreas(hass, a, b)
-  );
+      compareAreas(hass, a, b)
+    );
 
     return {
       title: config.title || hass.config.location_name,

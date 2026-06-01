@@ -155,7 +155,7 @@ class DialogSavantSceneEditor extends LitElement {
                   ? html`
                       <ha-button @click=${this._refreshAreaEntities}>
                         <ha-svg-icon
-                          slot="start"
+                          slot="icon"
                           .path=${mdiRefresh}
                         ></ha-svg-icon>
                         Capture room
@@ -195,7 +195,7 @@ class DialogSavantSceneEditor extends LitElement {
           @click=${this._save}
           .disabled=${!canSave}
         >
-          <ha-svg-icon slot="start" .path=${mdiContentSave}></ha-svg-icon>
+          <ha-svg-icon slot="icon" .path=${mdiContentSave}></ha-svg-icon>
           ${this._saving ? "Saving..." : "Save scene"}
         </ha-button>
       </ha-dialog>

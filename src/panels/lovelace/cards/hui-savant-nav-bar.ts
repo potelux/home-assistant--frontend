@@ -1,5 +1,5 @@
 import { mdiPlus } from "@mdi/js";
-import { css, html, LitElement } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators";
 import { navigate } from "../../../common/navigate";
 import "../../../components/ha-svg-icon";

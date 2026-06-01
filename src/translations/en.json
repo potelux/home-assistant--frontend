@@ -9932,6 +9932,10 @@
               "limit_min": "Minimum value",
               "limit_max": "Maximum value"
             },
+            "savant-scenes": {
+              "name": "Savant scenes",
+              "description": "A Savant-style scenes card that can activate scenes and capture new persistent scenes without leaving the dashboard."
+            },
             "todo-list": {
               "name": "To-do list",
               "description": "This card allows you to add, edit, check-off, and remove items from your to-do list.",

@@ -94,6 +94,10 @@ export const coreCards: Card[] = [
     showElement: true,
   },
   {
+    type: "savant-scenes",
+    showElement: true,
+  },
+  {
     type: "thermostat",
     showElement: true,
   },

@@ -1,7 +1,9 @@
 import type {
+  HassEntity,
   HassEntityAttributeBase,
   HassEntityBase,
 } from "home-assistant-js-websocket";
+import { computeDomain } from "../common/entity/compute_domain";
 import { navigate } from "../common/navigate";
 import type { HomeAssistant, ServiceCallResponse } from "../types";
 
@@ -25,6 +27,18 @@ export const SCENE_IGNORED_DOMAINS = [
   "update",
   "weather",
   "zone",
+];
+
+const MEDIA_PLAYER_SCENE_EXCLUDED_ATTRIBUTES = [
+  "access_token",
+  "assumed_state",
+  "entity_picture",
+  "entity_picture_local",
+  "friendly_name",
+  "icon",
+  "sound_mode_list",
+  "source_list",
+  "supported_features",
 ];
 
 let inititialSceneEditorData:
@@ -66,6 +80,20 @@ export type SceneMetaData = Record<
   string,
   { entity_only?: boolean | undefined }
 >;
+
+export const computeSceneEntityState = (
+  stateObj: HassEntity
+): { state: string; [key: string]: any } => {
+  const attributes = { ...stateObj.attributes };
+
+  if (computeDomain(stateObj.entity_id) === "media_player") {
+    MEDIA_PLAYER_SCENE_EXCLUDED_ATTRIBUTES.forEach((attribute) => {
+      delete attributes[attribute];
+    });
+  }
+
+  return { ...attributes, state: stateObj.state };
+};
 
 export const activateScene = (
   hass: HomeAssistant,

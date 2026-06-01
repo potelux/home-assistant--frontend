@@ -15,7 +15,7 @@ import {
   mdiPlaylistEdit,
   mdiTag,
 } from "@mdi/js";
-import type { HassEvent } from "home-assistant-js-websocket";
+import type { HassEntity, HassEvent } from "home-assistant-js-websocket";
 import type { CSSResultGroup, PropertyValues } from "lit";
 import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
@@ -54,6 +54,7 @@ import type {
 import {
   activateScene,
   applyScene,
+  computeSceneEntityState,
   deleteScene,
   getSceneConfig,
   getSceneEditorInitData,
@@ -418,8 +419,11 @@ export class HaSceneEditor extends PreventUnsavedMixin(
                         if (!entityStateObj) {
                           return nothing;
                         }
+                        const summary =
+                          this._computeMediaPlayerSceneSummary(entityId);
                         return html`
                           <ha-list-item
+                            ?twoline=${!!summary}
                             hasMeta
                             .graphic=${this._mode === "live"
                               ? "icon"
@@ -439,7 +443,14 @@ export class HaSceneEditor extends PreventUnsavedMixin(
                                   ></state-badge>
                                 `
                               : nothing}
-                            ${computeStateName(entityStateObj)}
+                            <span slot="headline"
+                              >${computeStateName(entityStateObj)}</span
+                            >
+                            ${summary
+                              ? html`<span slot="supporting-text"
+                                  >${summary}</span
+                                >`
+                              : nothing}
                           </ha-list-item>
                         `;
                       })}
@@ -491,9 +502,12 @@ export class HaSceneEditor extends PreventUnsavedMixin(
                           if (!entityStateObj) {
                             return nothing;
                           }
+                          const summary =
+                            this._computeMediaPlayerSceneSummary(entityId);
                           return html`
                             <ha-list-item
                               class="entity"
+                              ?twoline=${!!summary}
                               hasMeta
                               .graphic=${this._mode === "live"
                                 ? "icon"
@@ -511,7 +525,14 @@ export class HaSceneEditor extends PreventUnsavedMixin(
                                     slot="graphic"
                                   ></state-badge>`
                                 : nothing}
-                              ${computeStateName(entityStateObj)}
+                              <span slot="headline"
+                                >${computeStateName(entityStateObj)}</span
+                              >
+                              ${summary
+                                ? html`<span slot="supporting-text"
+                                    >${summary}</span
+                                  >`
+                                : nothing}
                               <div slot="meta">
                                 <ha-icon-button
                                   .path=${mdiDelete}
@@ -1024,6 +1045,96 @@ export class HaSceneEditor extends PreventUnsavedMixin(
     }
   }
 
+  private _computeMediaPlayerSceneSummary(
+    entityId: string
+  ): string | undefined {
+    if (this._mode !== "review" || computeDomain(entityId) !== "media_player") {
+      return undefined;
+    }
+
+    const entityState = this._config?.entities[entityId];
+    const stateObj = this.hass.states[entityId];
+
+    if (!stateObj || !entityState || typeof entityState === "string") {
+      return undefined;
+    }
+
+    const summaryParts: string[] = [];
+
+    const source = this._formatCapturedAttribute(
+      stateObj,
+      "source",
+      entityState.source
+    );
+    if (source) {
+      summaryParts.push(
+        this.hass.localize(
+          "ui.panel.config.scene.editor.entities.media_player_source",
+          { source }
+        )
+      );
+    }
+
+    const app =
+      this._stringifyCapturedValue(entityState.app_name) ||
+      this._stringifyCapturedValue(entityState.app_id);
+    if (app) {
+      summaryParts.push(
+        this.hass.localize(
+          "ui.panel.config.scene.editor.entities.media_player_app",
+          { app }
+        )
+      );
+    }
+
+    const media =
+      this._stringifyCapturedValue(entityState.media_title) ||
+      this._stringifyCapturedValue(entityState.media_series_title) ||
+      this._stringifyCapturedValue(entityState.media_content_id);
+    if (media) {
+      summaryParts.push(
+        this.hass.localize(
+          "ui.panel.config.scene.editor.entities.media_player_media",
+          { media }
+        )
+      );
+    }
+
+    const soundMode = this._formatCapturedAttribute(
+      stateObj,
+      "sound_mode",
+      entityState.sound_mode
+    );
+    if (soundMode) {
+      summaryParts.push(
+        this.hass.localize(
+          "ui.panel.config.scene.editor.entities.media_player_sound_mode",
+          { sound_mode: soundMode }
+        )
+      );
+    }
+
+    return summaryParts.length ? summaryParts.join(" - ") : undefined;
+  }
+
+  private _formatCapturedAttribute(
+    stateObj: HassEntity,
+    attribute: string,
+    value: unknown
+  ): string | undefined {
+    if (value === undefined || value === null || value === "") {
+      return undefined;
+    }
+    return this.hass.formatEntityAttributeValue(stateObj, attribute, value);
+  }
+
+  private _stringifyCapturedValue(value: unknown): string | undefined {
+    if (value === undefined || value === null || value === "") {
+      return undefined;
+    }
+    return String(value);
+  }
+
   private _calculateMetaData(): SceneMetaData {
     const output: SceneMetaData = {};
 
@@ -1069,7 +1180,7 @@ export class HaSceneEditor extends PreventUnsavedMixin(
     if (!stateObj) {
       return undefined;
     }
-    return { ...stateObj.attributes, state: stateObj.state };
+    return computeSceneEntityState(stateObj);
   }
 
   private _generateConfigFromLive() {

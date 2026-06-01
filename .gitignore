@@ -56,5 +56,6 @@ test/coverage/
 
 # AI tooling
 .claude
-.cursor
+.cursor/*
+!.cursor/environment.json
 .opencode

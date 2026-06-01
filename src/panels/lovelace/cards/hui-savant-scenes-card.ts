@@ -1,9 +1,11 @@
+import { mdiPlus } from "@mdi/js";
 import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { styleMap } from "lit/directives/style-map";
 import { computeDomain } from "../../../common/entity/compute_domain";
 import { computeStateName } from "../../../common/entity/compute_state_name";
 import "../../../components/ha-card";
+import "../../../components/ha-svg-icon";
 import type { SceneConfig, SceneEntity } from "../../../data/scene";
 import { activateScene, getSceneConfig } from "../../../data/scene";
 import type { LovelaceCardConfig } from "../../../data/lovelace/config/card";
@@ -93,6 +95,7 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
             active="scenes"
             .hass=${this.hass}
             .showCreate=${this._config.show_create}
+            .onCreate=${this._openCreateDialog}
             @savant-create-scene=${this._createScene}
           ></hui-savant-nav-bar>
           <div class="header-row">
@@ -100,6 +103,18 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
               ${this._config.area ? this._areaName(this._config.area) : "Home"}
               scenes
             </h2>
+            ${this._config.show_create
+              ? html`
+                  <button
+                    class="icon-btn"
+                    title=${this.hass.localize("ui.common.add")}
+                    @click=${this._openCreateDialog}
+                    ?disabled=${!this.hass.user?.is_admin}
+                  >
+                    <ha-svg-icon .path=${mdiPlus}></ha-svg-icon>
+                  </button>
+                `
+              : nothing}
           </div>
           ${strips}
         </div>
@@ -219,12 +234,19 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
     }
   }
 
-  private _createScene(ev: Event): void {
-    ev.stopPropagation();
+  private _openCreateDialog = (): void => {
+    if (!this.hass || !this._config) {
+      return;
+    }
     showSavantSceneEditorDialog(this, {
       hass: this.hass,
-      area: this._config?.area,
+      area: this._config.area,
     });
+  };
+
+  private _createScene(ev: Event): void {
+    ev.stopPropagation();
+    this._openCreateDialog();
   }
 
   private async _activateScene(ev: Event): Promise<void> {

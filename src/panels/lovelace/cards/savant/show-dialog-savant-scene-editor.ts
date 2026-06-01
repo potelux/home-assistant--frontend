@@ -12,9 +12,15 @@ const loadDialog = () => import("./dialog-savant-scene-editor");
 export const showSavantSceneEditorDialog = (
   element: HTMLElement,
   dialogParams: SavantSceneEditorDialogParams
-) =>
-  fireEvent(element, "show-dialog", {
+) => {
+  const target =
+    (element.closest("home-assistant") as HTMLElement | null) ||
+    (element.closest("ha-demo") as HTMLElement | null) ||
+    element;
+
+  fireEvent(target, "show-dialog", {
     dialogTag: "dialog-savant-scene-editor",
     dialogImport: loadDialog,
     dialogParams,
   });
+};

@@ -17,6 +17,9 @@ export class HuiSavantNavBar extends LitElement {
   @property({ type: Boolean, attribute: "show-create" }) public showCreate =
     false;
 
+  /** Preferred over the `savant-create-scene` event (works across shadow roots). */
+  @property({ attribute: false }) public onCreate?: () => void;
+
   protected render() {
     return html`
       <nav class="top-nav">
@@ -27,7 +30,13 @@ export class HuiSavantNavBar extends LitElement {
         >
           Rooms
         </button>
-        <div class="right">
+        <div class="right nav-right">
+          <button
+            class=${this.active === "scenes" ? "active" : ""}
+            @click=${this._openScenes}
+          >
+            Scenes
+          </button>
           ${this.showCreate
             ? html`
                 <button
@@ -39,14 +48,7 @@ export class HuiSavantNavBar extends LitElement {
                   <ha-svg-icon .path=${mdiPlus}></ha-svg-icon>
                 </button>
               `
-            : html`
-                <button
-                  class=${this.active === "scenes" ? "active" : ""}
-                  @click=${this._openScenes}
-                >
-                  Scenes
-                </button>
-              `}
+            : nothing}
         </div>
       </nav>
     `;
@@ -64,9 +66,17 @@ export class HuiSavantNavBar extends LitElement {
     navigate("/lovelace/scenes");
   }
 
-  private _fireCreate(): void {
+  private _fireCreate(ev: Event): void {
+    ev.stopPropagation();
+    if (this.onCreate) {
+      this.onCreate();
+      return;
+    }
     this.dispatchEvent(
-      new CustomEvent("savant-create-scene", { bubbles: true })
+      new CustomEvent("savant-create-scene", {
+        bubbles: true,
+        composed: true,
+      })
     );
   }
 
@@ -76,6 +86,15 @@ export class HuiSavantNavBar extends LitElement {
       :host {
         display: block;
         min-height: auto;
+      }
+      .nav-right {
+        align-items: center;
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+      .nav-right .icon-btn {
+        flex-shrink: 0;
       }
     `,
   ];

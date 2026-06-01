@@ -1,3 +1,4 @@
 {
+  "snapshot": "snapshot-20260601-9cbefd81-452f-409a-b8ca-64a4234cef13",
   "install": "export NVM_DIR=\"$HOME/.nvm\"\n[ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"\nnvm install\nexport PATH=\"$(dirname \"$(nvm which current)\"):$PATH\"\ncorepack enable\nyarn install --immutable"
 }

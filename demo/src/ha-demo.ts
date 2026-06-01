@@ -117,6 +117,7 @@ export class HaDemo extends HomeAssistantAppEl {
     Promise.all([selectedDemoConfig, localizePromise]).then(
       ([conf, localize]) => {
         hass.addEntities(conf.entities(localize));
+        conf.prepare?.(hass);
         if (conf.theme) {
           hass.mockTheme(conf.theme());
         }

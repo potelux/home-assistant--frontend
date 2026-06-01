@@ -4,6 +4,7 @@ import { energyEntities } from "../stubs/entities";
 import type { DemoConfig } from "./types";
 
 export const demoConfigs: (() => Promise<DemoConfig>)[] = [
+  () => import("./savant").then((mod) => mod.demoSavant),
   () => import("./sections").then((mod) => mod.demoSections),
   () => import("./arsaboo").then((mod) => mod.demoArsaboo),
   () => import("./teachingbirds").then((mod) => mod.demoTeachingbirds),
@@ -31,5 +32,6 @@ export const setDemoConfig = async (
   hass.addEntities(config.entities(hass.localize), true);
   hass.addEntities(energyEntities());
   lovelace.saveConfig(config.lovelace(hass.localize));
+  config.prepare?.(hass);
   hass.mockTheme(config.theme());
 };

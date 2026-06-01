@@ -32,6 +32,6 @@ export const setDemoConfig = async (
   hass.addEntities(config.entities(hass.localize), true);
   hass.addEntities(energyEntities());
   lovelace.saveConfig(config.lovelace(hass.localize));
-  config.prepare?.(hass);
+  config.prepare?.(hass as MockHomeAssistant);
   hass.mockTheme(config.theme());
 };

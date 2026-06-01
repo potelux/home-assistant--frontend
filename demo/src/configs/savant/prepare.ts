@@ -81,6 +81,7 @@ const areaForEntityId = (entityId: string): string | undefined => {
 export const prepareSavantDemo = (hass: MockHomeAssistant) => {
   mockAreaRegistry(hass, DEMO_AREAS);
 
+  let updated = false;
   for (const entityId of Object.keys(hass.states)) {
     const areaId = areaForEntityId(entityId);
     if (!areaId || !hass.entities[entityId]) {
@@ -90,5 +91,9 @@ export const prepareSavantDemo = (hass: MockHomeAssistant) => {
       ...hass.entities[entityId],
       area_id: areaId,
     };
+    updated = true;
+  }
+  if (updated) {
+    hass.updateHass({ entities: { ...hass.entities } });
   }
 };

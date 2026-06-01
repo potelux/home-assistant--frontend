@@ -437,6 +437,54 @@ this.hass.localize("ui.panel.config.updates.update_available", {
 - **Screen reader support**: Test with screen readers
 - **Color contrast**: Meet WCAG AA standards
 
+## Cursor Cloud specific instructions
+
+### Node.js and Yarn
+
+The VM may ship with Node 22 at `/exec-daemon/node`, but this repo requires **Node 24.16.0** (see `.nvmrc`). Use **nvm** and put its `bin` directory **before** `/exec-daemon/node` on `PATH`, then enable Yarn via **Corepack** (`corepack enable`; Yarn **4.15.0** is pinned in `.yarnrc.yml`).
+
+### Install and refresh dependencies
+
+- `script/setup` (runs `script/bootstrap` → `yarn install`), or CI-style: `yarn install --immutable`
+- After install, build shared resources before tests or typecheck (matches `.github/workflows/ci.yaml`):
+  - `./node_modules/.bin/gulp gen-icons-json build-translations build-locale-data`
+  - For full ESLint on gallery sources, also: `./node_modules/.bin/gulp gather-gallery-pages`
+
+### Lint, test, and build
+
+| Task             | Command                                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Lint (all)       | `yarn lint`                                                                                                        |
+| Lint (CI split)  | `yarn lint:eslint --quiet`, `yarn lint:types`, `yarn lint:lit --quiet`, `yarn lint:prettier`, `yarn lint:licenses` |
+| Test             | `yarn test` (run gulp resource build first; see above)                                                             |
+| Production build | `IS_TEST=true ./node_modules/.bin/gulp build-app` or `script/build_frontend`                                       |
+
+`yarn lint:types` expects `build/translations/translationMetadata.json` (produced by the translation gulp tasks during `build-app` or `build-translations`).
+
+### Running the UI without Home Assistant Core
+
+The **public demo** is the simplest end-to-end UI in this repo (mocked backend, no Core):
+
+```bash
+export SKIP_FETCH_NIGHTLY_TRANSLATIONS=1   # avoids interactive GitHub device auth for nightly translations
+demo/script/develop_demo                 # http://localhost:8090
+```
+
+`develop-demo` enables `translations-enable-merge-backend`, which can otherwise block on GitHub OAuth when no `GITHUB_TOKEN` is set.
+
+### Full frontend development (requires Core)
+
+- `script/develop` — watch build into `hass_frontend/`; point a running Home Assistant instance at this repo via `frontend.development_repo`
+- `script/develop_and_serve` — build and serve on port **8124** while Core runs on **8123**
+- Devcontainer: `script/core` starts Core; see `.devcontainer/devcontainer.json` for port mapping
+
+### Other dev servers (optional)
+
+| App            | Command                          | Port |
+| -------------- | -------------------------------- | ---- |
+| Design gallery | `gallery/script/develop_gallery` | 8100 |
+| Cast           | `cast/script/develop_cast`       | 8080 |
+
 ## Development Workflow
 
 ### Setup and Commands

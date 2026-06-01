@@ -1,19 +1,22 @@
-import { mdiPlus, mdiPlay } from "@mdi/js";
 import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
+import { styleMap } from "lit/directives/style-map";
 import { computeDomain } from "../../../common/entity/compute_domain";
 import { computeStateName } from "../../../common/entity/compute_state_name";
-import "../../../components/ha-button";
 import "../../../components/ha-card";
-import "../../../components/ha-state-icon";
-import "../../../components/ha-svg-icon";
 import type { SceneConfig, SceneEntity } from "../../../data/scene";
 import { activateScene, getSceneConfig } from "../../../data/scene";
+import type { LovelaceCardConfig } from "../../../data/lovelace/config/card";
 import type { HomeAssistant } from "../../../types";
 import { showToast } from "../../../util/toast";
 import type { LovelaceCard } from "../types";
 import { showSavantSceneEditorDialog } from "./savant/show-dialog-savant-scene-editor";
-import type { LovelaceCardConfig } from "../../../data/lovelace/config/card";
+import "./hui-savant-nav-bar";
+import {
+  sceneBackground,
+  SAVANT_DEFAULT_HOME_IMAGE,
+  savantScreenStyles,
+} from "./savant/savant-styles";
 
 interface SavantScenesCardConfig extends LovelaceCardConfig {
   type: "savant-scenes";
@@ -21,6 +24,9 @@ interface SavantScenesCardConfig extends LovelaceCardConfig {
   area?: string;
   show_create?: boolean;
   group_by_area?: boolean;
+  home_image?: string;
+  /** When true, only scene strips (no top nav / full-screen chrome). */
+  embedded?: boolean;
 }
 
 @customElement("hui-savant-scenes-card")
@@ -32,7 +38,7 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
   private _sceneConfigs: Record<string, SceneConfig | null> = {};
 
   public getCardSize(): number {
-    return 4;
+    return 12;
   }
 
   public setConfig(config: SavantScenesCardConfig): void {
@@ -53,48 +59,52 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
     }
 
     const scenes = this._scenes();
-    const title = this._config.title || "Scenes";
+    const grouped = this._config.group_by_area && !this._config.area;
+
+    const strips = html`
+      <div class="strips ${this._config.embedded ? "embedded" : ""}">
+        ${scenes.length
+          ? grouped
+            ? this._renderGroupedScenes(scenes)
+            : scenes.map((scene) => this._renderScene(scene))
+          : html`
+              <div class="empty">
+                No scenes yet. Capture the current room state to create one.
+              </div>
+            `}
+      </div>
+    `;
+
+    if (this._config.embedded) {
+      return html`<ha-card class="embedded-card">${strips}</ha-card>`;
+    }
+
+    const backdrop = this._config.home_image || SAVANT_DEFAULT_HOME_IMAGE;
 
     return html`
       <ha-card>
-        <div class="header">
-          <div>
-            <h2>${title}</h2>
-            <p>${this._subtitle(scenes.length)}</p>
+        <div
+          class="screen has-backdrop"
+          style=${styleMap({
+            "--savant-backdrop": `url("${backdrop}")`,
+          })}
+        >
+          <hui-savant-nav-bar
+            active="scenes"
+            .hass=${this.hass}
+            .showCreate=${this._config.show_create}
+            @savant-create-scene=${this._createScene}
+          ></hui-savant-nav-bar>
+          <div class="header-row">
+            <h2>
+              ${this._config.area ? this._areaName(this._config.area) : "Home"}
+              scenes
+            </h2>
           </div>
-          ${this._config.show_create
-            ? html`
-                <ha-button
-                  @click=${this._createScene}
-                  .disabled=${!this.hass.user?.is_admin}
-                >
-                  <ha-svg-icon slot="icon" .path=${mdiPlus}></ha-svg-icon>
-                  Create
-                </ha-button>
-              `
-            : nothing}
-        </div>
-        <div class="content">
-          ${scenes.length
-            ? this._config.group_by_area
-              ? this._renderGroupedScenes(scenes)
-              : scenes.map((scene) => this._renderScene(scene))
-            : html`
-                <div class="empty">
-                  No scenes yet. Capture the current room state to create one.
-                </div>
-              `}
+          ${strips}
         </div>
       </ha-card>
     `;
-  }
-
-  private _subtitle(sceneCount: number): string {
-    if (this._config?.area) {
-      const area = this.hass.areas[this._config.area];
-      return area ? `${area.name} scenes` : "Room scenes";
-    }
-    return sceneCount === 1 ? "1 scene" : `${sceneCount} scenes`;
   }
 
   private _scenes(): SceneEntity[] {
@@ -128,47 +138,42 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
 
     return Object.keys(groups)
       .sort((a, b) => this._areaName(a).localeCompare(this._areaName(b)))
-      .map(
-        (areaId) => html`
-          <div class="group">
-            <h3>${this._areaName(areaId)}</h3>
-            ${groups[areaId].map((scene) => this._renderScene(scene))}
-          </div>
-        `
-      );
+      .flatMap((areaId) => [
+        html`<p class="section-label">${this._areaName(areaId)}</p>`,
+        ...groups[areaId].map((scene) => this._renderScene(scene)),
+      ]);
   }
 
   private _renderScene(scene: SceneEntity) {
-    const capturedEntities = this._capturedEntities(scene);
+    const roomLabel = this._sceneRoomLabel(scene);
     return html`
-      <div class="scene" .scene=${scene} @click=${this._activateScene}>
-        <ha-state-icon .hass=${this.hass} .stateObj=${scene}></ha-state-icon>
-        <div class="scene-info">
-          <div class="scene-name">${computeStateName(scene)}</div>
-          <div class="scene-meta">
-            ${capturedEntities.length
-              ? `${capturedEntities.length} captured entities`
-              : scene.attributes.id
-                ? "Loading captured entities"
-                : "YAML scene"}
-          </div>
-        </div>
-        <div class="entities">
-          ${capturedEntities.slice(0, 5).map((entityId) => {
-            const stateObj = this.hass.states[entityId];
-            return stateObj
-              ? html`
-                  <ha-state-icon
-                    .hass=${this.hass}
-                    .stateObj=${stateObj}
-                  ></ha-state-icon>
-                `
-              : nothing;
-          })}
-        </div>
-        <ha-svg-icon class="play" .path=${mdiPlay}></ha-svg-icon>
-      </div>
+      <button
+        class="scene-strip"
+        style=${styleMap({
+          background: sceneBackground(scene.entity_id),
+        })}
+        .scene=${scene}
+        @click=${this._activateScene}
+      >
+        <span class="overlay">
+          <h3 class="name">${computeStateName(scene)}</h3>
+          <p class="meta">${roomLabel}</p>
+        </span>
+      </button>
     `;
+  }
+
+  private _sceneRoomLabel(scene: SceneEntity): string {
+    const areaId = this._sceneArea(scene);
+    if (!areaId) {
+      const count = this._capturedEntities(scene).length;
+      if (count) {
+        return `${count} device${count === 1 ? "" : "s"}`;
+      }
+      return scene.attributes.id ? "Savant scene" : "Whole home";
+    }
+    const area = this.hass.areas[areaId];
+    return area ? area.name : "1 room";
   }
 
   private _sceneArea(scene: SceneEntity): string | undefined {
@@ -229,73 +234,29 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
     showToast(this, { message: `${computeStateName(scene)} activated` });
   }
 
-  static styles = css`
-    .header {
-      align-items: center;
-      display: flex;
-      gap: 16px;
-      justify-content: space-between;
-      padding: 20px 20px 8px;
-    }
-    h2,
-    h3,
-    p {
-      margin: 0;
-    }
-    h2 {
-      font-size: 24px;
-      font-weight: 500;
-    }
-    h3 {
-      color: var(--secondary-text-color);
-      font-size: 14px;
-      font-weight: 500;
-      margin: 16px 0 8px;
-      text-transform: uppercase;
-    }
-    p,
-    .scene-meta,
-    .empty {
-      color: var(--secondary-text-color);
-    }
-    .content {
-      padding: 0 12px 12px;
-    }
-    .group:first-child h3 {
-      margin-top: 8px;
-    }
-    .scene {
-      align-items: center;
-      border-radius: 16px;
-      cursor: pointer;
-      display: grid;
-      gap: 12px;
-      grid-template-columns: 40px 1fr auto 32px;
-      min-height: 56px;
-      padding: 10px 8px;
-    }
-    .scene:hover {
-      background: var(--secondary-background-color);
-    }
-    .scene-name {
-      font-weight: 500;
-    }
-    .entities {
-      display: flex;
-      gap: 4px;
-    }
-    .entities ha-state-icon {
-      color: var(--secondary-text-color);
-      height: 20px;
-      width: 20px;
-    }
-    .play {
-      color: var(--secondary-text-color);
-    }
-    .empty {
-      padding: 16px 8px 20px;
-    }
-  `;
+  static styles = [
+    savantScreenStyles,
+    css`
+      .header-row h2 {
+        font-size: 13px;
+      }
+      .strips {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .embedded-card {
+        background: transparent;
+        border: none;
+        box-shadow: none;
+      }
+      .icon-btn {
+        font-size: 22px;
+        font-weight: 300;
+        line-height: 1;
+      }
+    `,
+  ];
 }
 
 declare global {

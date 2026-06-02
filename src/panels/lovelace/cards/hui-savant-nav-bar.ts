@@ -6,7 +6,7 @@ import "../../../components/ha-svg-icon";
 import type { HomeAssistant } from "../../../types";
 import { savantScreenStyles } from "./savant/savant-styles";
 
-export type SavantNavActive = "home" | "rooms" | "scenes";
+export type SavantNavActive = "home" | "scenes";
 
 @customElement("hui-savant-nav-bar")
 export class HuiSavantNavBar extends LitElement {
@@ -22,13 +22,13 @@ export class HuiSavantNavBar extends LitElement {
 
   protected render() {
     return html`
-      <nav class="top-nav">
+      <nav class="top-nav savant-primary-nav">
         <button class="left" @click=${this._openSettings}>Settings</button>
         <button
-          class="center ${this.active === "rooms" ? "active" : ""}"
-          @click=${this._openRooms}
+          class="center ${this.active === "home" ? "active" : ""}"
+          @click=${this._openHome}
         >
-          Rooms
+          Home
         </button>
         <div class="right nav-right">
           <button
@@ -58,8 +58,8 @@ export class HuiSavantNavBar extends LitElement {
     navigate("/profile");
   }
 
-  private _openRooms(): void {
-    navigate("/lovelace/rooms");
+  private _openHome(): void {
+    navigate("/lovelace/home");
   }
 
   private _openScenes(): void {

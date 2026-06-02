@@ -5,6 +5,8 @@ export interface SavantSceneEditorDialogParams {
   hass: HomeAssistant;
   area?: string;
   entities?: string[];
+  /** When true, skip Fast Capture / Build New chooser (e.g. room subview). */
+  skip_mode?: boolean;
 }
 
 const loadDialog = () => import("./dialog-savant-scene-editor");

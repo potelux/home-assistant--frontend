@@ -1,9 +1,9 @@
-import { mdiPlus } from "@mdi/js";
 import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { styleMap } from "lit/directives/style-map";
 import { computeDomain } from "../../../common/entity/compute_domain";
 import { computeStateName } from "../../../common/entity/compute_state_name";
+import { entityAreaId } from "./savant/savant-services";
 import "../../../components/ha-card";
 import "../../../components/ha-svg-icon";
 import type { SceneConfig, SceneEntity } from "../../../data/scene";
@@ -70,8 +70,15 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
             ? this._renderGroupedScenes(scenes)
             : scenes.map((scene) => this._renderScene(scene))
           : html`
+              <button
+                class="get-started"
+                @click=${this._openCreateDialog}
+                ?disabled=${!this.hass.user?.is_admin}
+              >
+                Get Started
+              </button>
               <div class="empty">
-                No scenes yet. Capture the current room state to create one.
+                Create a scene to save and recall service settings with one tap.
               </div>
             `}
       </div>
@@ -98,24 +105,10 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
             .onCreate=${this._openCreateDialog}
             @savant-create-scene=${this._createScene}
           ></hui-savant-nav-bar>
-          <div class="header-row">
-            <h2>
-              ${this._config.area ? this._areaName(this._config.area) : "Home"}
-              scenes
-            </h2>
-            ${this._config.show_create
-              ? html`
-                  <button
-                    class="icon-btn"
-                    title=${this.hass.localize("ui.common.add")}
-                    @click=${this._openCreateDialog}
-                    ?disabled=${!this.hass.user?.is_admin}
-                  >
-                    <ha-svg-icon .path=${mdiPlus}></ha-svg-icon>
-                  </button>
-                `
-              : nothing}
-          </div>
+          <h1 class="scenes-title">Scenes</h1>
+          <p class="scenes-count">
+            ${scenes.length} Scene${scenes.length === 1 ? "" : "s"}
+          </p>
           ${strips}
         </div>
       </ha-card>
@@ -179,16 +172,35 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
   }
 
   private _sceneRoomLabel(scene: SceneEntity): string {
-    const areaId = this._sceneArea(scene);
-    if (!areaId) {
-      const count = this._capturedEntities(scene).length;
-      if (count) {
-        return `${count} device${count === 1 ? "" : "s"}`;
-      }
-      return scene.attributes.id ? "Savant scene" : "Whole home";
+    const roomCount = this._sceneRoomCount(scene);
+    if (roomCount > 1) {
+      return `${roomCount} Rooms`;
     }
-    const area = this.hass.areas[areaId];
-    return area ? area.name : "1 room";
+    const areaId = this._sceneArea(scene);
+    if (areaId) {
+      return this.hass.areas[areaId]?.name || "1 Room";
+    }
+    const entityCount = this._capturedEntities(scene).length;
+    if (entityCount) {
+      return `${entityCount} device${entityCount === 1 ? "" : "s"}`;
+    }
+    return "1 Room";
+  }
+
+  private _sceneRoomCount(scene: SceneEntity): number {
+    const sceneId = scene.attributes.id;
+    const config = sceneId ? this._sceneConfigs[sceneId] : null;
+    if (!config?.entities) {
+      return this._sceneArea(scene) ? 1 : 0;
+    }
+    const areas = new Set<string>();
+    for (const entityId of Object.keys(config.entities)) {
+      const areaId = entityAreaId(this.hass, entityId);
+      if (areaId) {
+        areas.add(areaId);
+      }
+    }
+    return areas.size || (this._sceneArea(scene) ? 1 : 0);
   }
 
   private _sceneArea(scene: SceneEntity): string | undefined {
@@ -241,6 +253,7 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
     showSavantSceneEditorDialog(this, {
       hass: this.hass,
       area: this._config.area,
+      skip_mode: Boolean(this._config.area),
     });
   };
 

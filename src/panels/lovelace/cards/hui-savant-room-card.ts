@@ -11,6 +11,8 @@ import type { LovelaceCardConfig } from "../../../data/lovelace/config/card";
 import type { HomeAssistant } from "../../../types";
 import type { LovelaceCard } from "../types";
 import "./hui-savant-scenes-card";
+import "./savant/savant-service-carousel";
+import { getSavantServicesForScope } from "./savant/savant-services";
 import { roomBackground, savantScreenStyles } from "./savant/savant-styles";
 
 interface SavantRoomCardConfig extends LovelaceCardConfig {
@@ -96,6 +98,10 @@ export class HuiSavantRoomCard extends LitElement implements LovelaceCard {
           >
             <h1>${area.name}</h1>
           </header>
+          <savant-service-carousel
+            .hass=${this.hass}
+            .services=${getSavantServicesForScope(this.hass, this._config.area)}
+          ></savant-service-carousel>
           <p class="section-label">Scenes</p>
           <hui-savant-scenes-card
             .hass=${this.hass}

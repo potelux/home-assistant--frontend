@@ -368,6 +368,160 @@ export const savantScreenStyles = css`
     padding: 32px 24px;
     text-align: center;
   }
+
+  .rooms-entry {
+    align-items: center;
+    background: none;
+    border: none;
+    color: var(--savant-text);
+    cursor: pointer;
+    display: flex;
+    font-size: 11px;
+    font-weight: 600;
+    gap: 6px;
+    justify-content: center;
+    letter-spacing: 0.16em;
+    margin: 0 auto 8px;
+    padding: 12px 20px;
+    text-transform: uppercase;
+    width: 100%;
+  }
+
+  .rooms-entry ha-svg-icon {
+    height: 18px;
+    opacity: 0.7;
+    width: 18px;
+  }
+
+  .activity-feed {
+    background: none;
+    border: none;
+    color: var(--savant-text-muted);
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 400;
+    margin: 0;
+    padding: 0;
+    text-align: left;
+    width: 100%;
+  }
+
+  .activity-feed:hover {
+    color: var(--savant-text);
+  }
+
+  .scenes-title {
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: 0.06em;
+    margin: 0;
+    padding: 8px 20px 4px;
+    text-transform: uppercase;
+  }
+
+  .scenes-count {
+    color: var(--savant-text-muted);
+    font-size: 14px;
+    margin: 0;
+    padding: 0 20px 16px;
+  }
+
+  .get-started {
+    backdrop-filter: blur(18px);
+    background: var(--savant-glass);
+    border: 1px solid var(--savant-glass-border);
+    border-radius: var(--savant-radius);
+    color: var(--savant-text);
+    cursor: pointer;
+    display: block;
+    font-size: 16px;
+    font-weight: 500;
+    margin: 24px 20px;
+    padding: 18px 24px;
+    text-align: center;
+    width: calc(100% - 40px);
+  }
+
+  .room-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .room-row .room-strip {
+    flex-shrink: 0;
+  }
+
+  .capture-options {
+    display: grid;
+    gap: 12px;
+    padding: 8px 0;
+  }
+
+  .capture-option {
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--savant-glass-border);
+    border-radius: var(--savant-radius);
+    cursor: pointer;
+    padding: 20px;
+    text-align: left;
+    width: 100%;
+  }
+
+  .capture-option.recommended {
+    border-color: rgba(201, 169, 98, 0.45);
+  }
+
+  .capture-option h4 {
+    font-size: 17px;
+    font-weight: 500;
+    margin: 0 0 8px;
+  }
+
+  .capture-option p {
+    color: var(--savant-text-muted);
+    font-size: 14px;
+    line-height: 1.45;
+    margin: 0;
+  }
+
+  .capture-option .badge {
+    color: var(--savant-accent);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .room-check-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .room-check {
+    align-items: center;
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--savant-glass-border);
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    text-align: left;
+    width: 100%;
+  }
+
+  .room-check.selected {
+    border-color: rgba(201, 169, 98, 0.5);
+  }
+
+  .room-check input {
+    accent-color: var(--savant-accent);
+  }
 `;
 
 export const sceneBackground = (key: string): string => {

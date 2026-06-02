@@ -8,6 +8,8 @@ import type { LovelaceCardConfig } from "../../../data/lovelace/config/card";
 import type { HomeAssistant } from "../../../types";
 import type { LovelaceCard } from "../types";
 import "./hui-savant-nav-bar";
+import "./savant/savant-service-carousel";
+import { getSavantServicesForScope } from "./savant/savant-services";
 import {
   roomBackground,
   SAVANT_DEFAULT_HOME_IMAGE,
@@ -54,13 +56,13 @@ export class HuiSavantRoomsCard extends LitElement implements LovelaceCard {
             "--savant-backdrop": `url("${this._config.home_image || SAVANT_DEFAULT_HOME_IMAGE}")`,
           })}
         >
-          <hui-savant-nav-bar
-            active="rooms"
-            .hass=${this.hass}
-          ></hui-savant-nav-bar>
+          <hui-savant-nav-bar .hass=${this.hass}></hui-savant-nav-bar>
           <header class="hero compact">
             <h1>Rooms</h1>
-            <p class="status">Select a room to control</p>
+            <p class="status">
+              Swipe through services in each room. Tap a room for scenes and
+              devices.
+            </p>
           </header>
           <div class="strips">
             ${areaIds.length
@@ -79,19 +81,38 @@ export class HuiSavantRoomsCard extends LitElement implements LovelaceCard {
     }
   }
 
+  private _roomServiceTap(ev: CustomEvent): void {
+    ev.stopPropagation();
+    const areaId = (ev.currentTarget as HTMLElement).dataset.areaId;
+    if (areaId) {
+      navigate(`/lovelace/${areaId}`);
+    }
+  }
+
   private _renderRoom(areaId: string) {
     const area = this.hass.areas[areaId];
+    const services = getSavantServicesForScope(this.hass, areaId);
+
     return html`
-      <button
-        class="room-strip"
-        style=${styleMap({ background: roomBackground(areaId) })}
-        data-area-id=${areaId}
-        @click=${this._openRoom}
-      >
-        <span class="overlay">
-          <h2 class="name">${area.name}</h2>
-        </span>
-      </button>
+      <div class="room-row">
+        <button
+          class="room-strip"
+          style=${styleMap({ background: roomBackground(areaId) })}
+          data-area-id=${areaId}
+          @click=${this._openRoom}
+        >
+          <span class="overlay">
+            <h2 class="name">${area.name}</h2>
+          </span>
+        </button>
+        <savant-service-carousel
+          compact
+          .hass=${this.hass}
+          .services=${services}
+          data-area-id=${areaId}
+          @savant-service-tap=${this._roomServiceTap}
+        ></savant-service-carousel>
+      </div>
     `;
   }
 
@@ -105,6 +126,9 @@ export class HuiSavantRoomsCard extends LitElement implements LovelaceCard {
         display: flex;
         flex-direction: column;
         gap: 2px;
+      }
+      .room-row + .room-row {
+        margin-top: 2px;
       }
     `,
   ];

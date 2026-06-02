@@ -11,12 +11,9 @@ import { activateScene, getSceneConfig } from "../../../data/scene";
 import type { LovelaceCardConfig } from "../../../data/lovelace/config/card";
 import type { HomeAssistant } from "../../../types";
 import { showToast } from "../../../util/toast";
-import type { LovelaceCard } from "../types";
+import type { LovelaceCard, LovelaceGridOptions } from "../types";
 import { showSavantSceneEditorDialog } from "./savant/show-dialog-savant-scene-editor";
-import {
-  sceneBackground,
-  savantSceneCardStyles,
-} from "./savant/savant-styles";
+import { sceneBackground, savantSceneCardStyles } from "./savant/savant-styles";
 
 export interface SavantScenesCardConfig extends LovelaceCardConfig {
   type: "savant-scenes";
@@ -33,6 +30,23 @@ export class HuiSavantScenesCard extends LitElement implements LovelaceCard {
   @state() private _config?: SavantScenesCardConfig;
 
   private _sceneConfigs: Record<string, SceneConfig | null> = {};
+
+  public static getStubConfig(): SavantScenesCardConfig {
+    return {
+      type: "savant-scenes",
+      show_create: true,
+      group_by_area: true,
+    };
+  }
+
+  public getGridOptions(): LovelaceGridOptions {
+    return {
+      columns: 12,
+      min_columns: 6,
+      rows: 4,
+      min_rows: 3,
+    };
+  }
 
   public getCardSize(): number {
     return 6;
@@ -52,8 +66,11 @@ export class HuiSavantScenesCard extends LitElement implements LovelaceCard {
   }
 
   protected render() {
-    if (!this._config || !this.hass) {
+    if (!this._config) {
       return nothing;
+    }
+    if (!this.hass) {
+      return html`<ha-card><div class="empty">Loading…</div></ha-card>`;
     }
 
     const scenes = this._scenes();

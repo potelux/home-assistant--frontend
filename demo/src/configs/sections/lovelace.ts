@@ -361,5 +361,18 @@ export const demoLovelaceSections: DemoConfig["lovelace"] = (localize) => ({
         },
       ],
     },
+    {
+      title: "Scenes",
+      path: "demo-scenes",
+      panel: true,
+      icon: "mdi:palette",
+      cards: [
+        {
+          type: "savant-scenes",
+          show_create: true,
+          group_by_area: true,
+        },
+      ],
+    },
   ],
 });

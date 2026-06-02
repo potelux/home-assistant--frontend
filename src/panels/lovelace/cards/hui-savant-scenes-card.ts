@@ -1,9 +1,9 @@
-import { css, html, LitElement, nothing } from "lit";
+import { mdiPlus } from "@mdi/js";
+import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { styleMap } from "lit/directives/style-map";
 import { computeDomain } from "../../../common/entity/compute_domain";
 import { computeStateName } from "../../../common/entity/compute_state_name";
-import { entityAreaId } from "./savant/savant-services";
 import "../../../components/ha-card";
 import "../../../components/ha-svg-icon";
 import type { SceneConfig, SceneEntity } from "../../../data/scene";
@@ -13,26 +13,21 @@ import type { HomeAssistant } from "../../../types";
 import { showToast } from "../../../util/toast";
 import type { LovelaceCard } from "../types";
 import { showSavantSceneEditorDialog } from "./savant/show-dialog-savant-scene-editor";
-import "./hui-savant-nav-bar";
 import {
   sceneBackground,
-  SAVANT_DEFAULT_HOME_IMAGE,
-  savantScreenStyles,
+  savantSceneCardStyles,
 } from "./savant/savant-styles";
 
-interface SavantScenesCardConfig extends LovelaceCardConfig {
+export interface SavantScenesCardConfig extends LovelaceCardConfig {
   type: "savant-scenes";
   title?: string;
   area?: string;
   show_create?: boolean;
   group_by_area?: boolean;
-  home_image?: string;
-  /** When true, only scene strips (no top nav / full-screen chrome). */
-  embedded?: boolean;
 }
 
 @customElement("hui-savant-scenes-card")
-class HuiSavantScenesCard extends LitElement implements LovelaceCard {
+export class HuiSavantScenesCard extends LitElement implements LovelaceCard {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
   @state() private _config?: SavantScenesCardConfig;
@@ -40,13 +35,14 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
   private _sceneConfigs: Record<string, SceneConfig | null> = {};
 
   public getCardSize(): number {
-    return 12;
+    return 6;
   }
 
   public setConfig(config: SavantScenesCardConfig): void {
     this._config = {
       show_create: true,
       group_by_area: true,
+      title: "Scenes",
       ...config,
     };
   }
@@ -61,55 +57,35 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
     }
 
     const scenes = this._scenes();
-    const grouped = this._config.group_by_area && !this._config.area;
-
-    const strips = html`
-      <div class="strips ${this._config.embedded ? "embedded" : ""}">
-        ${scenes.length
-          ? grouped
-            ? this._renderGroupedScenes(scenes)
-            : scenes.map((scene) => this._renderScene(scene))
-          : html`
-              <button
-                class="get-started"
-                @click=${this._openCreateDialog}
-                ?disabled=${!this.hass.user?.is_admin}
-              >
-                Get Started
-              </button>
-              <div class="empty">
-                Create a scene to save and recall service settings with one tap.
-              </div>
-            `}
-      </div>
-    `;
-
-    if (this._config.embedded) {
-      return html`<ha-card class="embedded-card">${strips}</ha-card>`;
-    }
-
-    const backdrop = this._config.home_image || SAVANT_DEFAULT_HOME_IMAGE;
+    const title = this._config.title || "Scenes";
 
     return html`
       <ha-card>
-        <div
-          class="screen has-backdrop"
-          style=${styleMap({
-            "--savant-backdrop": `url("${backdrop}")`,
-          })}
-        >
-          <hui-savant-nav-bar
-            active="scenes"
-            .hass=${this.hass}
-            .showCreate=${this._config.show_create}
-            .onCreate=${this._openCreateDialog}
-            @savant-create-scene=${this._createScene}
-          ></hui-savant-nav-bar>
-          <h1 class="scenes-title">Scenes</h1>
-          <p class="scenes-count">
-            ${scenes.length} Scene${scenes.length === 1 ? "" : "s"}
-          </p>
-          ${strips}
+        <div class="header">
+          <h2>${title}</h2>
+          ${this._config.show_create
+            ? html`
+                <button
+                  class="icon-btn"
+                  title=${this.hass.localize("ui.common.add")}
+                  @click=${this._openCreateDialog}
+                  ?disabled=${!this.hass.user?.is_admin}
+                >
+                  <ha-svg-icon .path=${mdiPlus}></ha-svg-icon>
+                </button>
+              `
+            : nothing}
+        </div>
+        <div class="strips">
+          ${scenes.length
+            ? this._config.group_by_area && !this._config.area
+              ? this._renderGroupedScenes(scenes)
+              : scenes.map((scene) => this._renderScene(scene))
+            : html`
+                <p class="empty">
+                  No scenes yet. Use + to capture the current room state.
+                </p>
+              `}
         </div>
       </ha-card>
     `;
@@ -172,35 +148,15 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
   }
 
   private _sceneRoomLabel(scene: SceneEntity): string {
-    const roomCount = this._sceneRoomCount(scene);
-    if (roomCount > 1) {
-      return `${roomCount} Rooms`;
-    }
     const areaId = this._sceneArea(scene);
     if (areaId) {
-      return this.hass.areas[areaId]?.name || "1 Room";
+      return this.hass.areas[areaId]?.name || "1 room";
     }
-    const entityCount = this._capturedEntities(scene).length;
-    if (entityCount) {
-      return `${entityCount} device${entityCount === 1 ? "" : "s"}`;
+    const count = this._capturedEntities(scene).length;
+    if (count) {
+      return `${count} device${count === 1 ? "" : "s"}`;
     }
-    return "1 Room";
-  }
-
-  private _sceneRoomCount(scene: SceneEntity): number {
-    const sceneId = scene.attributes.id;
-    const config = sceneId ? this._sceneConfigs[sceneId] : null;
-    if (!config?.entities) {
-      return this._sceneArea(scene) ? 1 : 0;
-    }
-    const areas = new Set<string>();
-    for (const entityId of Object.keys(config.entities)) {
-      const areaId = entityAreaId(this.hass, entityId);
-      if (areaId) {
-        areas.add(areaId);
-      }
-    }
-    return areas.size || (this._sceneArea(scene) ? 1 : 0);
+    return "Scene";
   }
 
   private _sceneArea(scene: SceneEntity): string | undefined {
@@ -213,7 +169,7 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
   }
 
   private _areaName(areaId: string): string {
-    return areaId ? this.hass.areas[areaId]?.name || "Room" : "Whole home";
+    return areaId ? this.hass.areas[areaId]?.name || "Room" : "Other";
   }
 
   private _capturedEntities(scene: SceneEntity): string[] {
@@ -253,14 +209,8 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
     showSavantSceneEditorDialog(this, {
       hass: this.hass,
       area: this._config.area,
-      skip_mode: Boolean(this._config.area),
     });
   };
-
-  private _createScene(ev: Event): void {
-    ev.stopPropagation();
-    this._openCreateDialog();
-  }
 
   private async _activateScene(ev: Event): Promise<void> {
     const scene = (ev.currentTarget as HTMLElement & { scene: SceneEntity })
@@ -269,29 +219,7 @@ class HuiSavantScenesCard extends LitElement implements LovelaceCard {
     showToast(this, { message: `${computeStateName(scene)} activated` });
   }
 
-  static styles = [
-    savantScreenStyles,
-    css`
-      .header-row h2 {
-        font-size: 13px;
-      }
-      .strips {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-      .embedded-card {
-        background: transparent;
-        border: none;
-        box-shadow: none;
-      }
-      .icon-btn {
-        font-size: 22px;
-        font-weight: 300;
-        line-height: 1;
-      }
-    `,
-  ];
+  static styles = [savantSceneCardStyles];
 }
 
 declare global {

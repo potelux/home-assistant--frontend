@@ -1,6 +1,6 @@
 import type { AreaRegistryEntry } from "../../../src/data/area/area_registry";
 import type { MockHomeAssistant } from "../../../src/fake_data/provide_hass";
-import { mockAreaRegistry } from "../../stubs/area_registry";
+import { mockAreaRegistry } from "./area_registry";
 
 const DEMO_AREAS: AreaRegistryEntry[] = [
   {
@@ -29,32 +29,6 @@ const DEMO_AREAS: AreaRegistryEntry[] = [
     created_at: 0,
     modified_at: 0,
   },
-  {
-    area_id: "study",
-    name: "Study",
-    aliases: [],
-    floor_id: null,
-    humidity_entity_id: null,
-    icon: "mdi:desk",
-    labels: [],
-    picture: null,
-    temperature_entity_id: null,
-    created_at: 0,
-    modified_at: 0,
-  },
-  {
-    area_id: "outdoor",
-    name: "Outdoor",
-    aliases: [],
-    floor_id: null,
-    humidity_entity_id: null,
-    icon: "mdi:tree",
-    labels: [],
-    picture: null,
-    temperature_entity_id: null,
-    created_at: 0,
-    modified_at: 0,
-  },
 ];
 
 const areaForEntityId = (entityId: string): string | undefined => {
@@ -69,18 +43,12 @@ const areaForEntityId = (entityId: string): string | undefined => {
   if (objectId.includes("kitchen") || objectId === "worktop_spotlights") {
     return "kitchen";
   }
-  if (objectId.includes("study") || objectId === "in_meeting") {
-    return "study";
-  }
-  if (objectId.includes("outdoor") || objectId === "flood_light") {
-    return "outdoor";
-  }
   return undefined;
 };
 
-export const prepareSavantDemo = (hass: MockHomeAssistant) => {
+/** Assigns demo area_ids so the Savant scene editor can capture by room. */
+export const assignDemoAreas = (hass: MockHomeAssistant) => {
   mockAreaRegistry(hass, DEMO_AREAS);
-
   let updated = false;
   for (const entityId of Object.keys(hass.states)) {
     const areaId = areaForEntityId(entityId);

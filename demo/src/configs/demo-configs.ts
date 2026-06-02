@@ -4,7 +4,6 @@ import { energyEntities } from "../stubs/entities";
 import type { DemoConfig } from "./types";
 
 export const demoConfigs: (() => Promise<DemoConfig>)[] = [
-  () => import("./savant").then((mod) => mod.demoSavant),
   () => import("./sections").then((mod) => mod.demoSections),
   () => import("./arsaboo").then((mod) => mod.demoArsaboo),
   () => import("./teachingbirds").then((mod) => mod.demoTeachingbirds),

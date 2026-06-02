@@ -1,6 +1,8 @@
+import { assignDemoAreas } from "../../stubs/assign_demo_areas";
 import type { DemoConfig } from "../types";
 import { demoEntitiesSections } from "./entities";
 import { demoLovelaceSections } from "./lovelace";
+import { demoSavantTheme } from "./theme";
 
 export const demoSections: DemoConfig = {
   authorName: "Home Assistant",
@@ -8,5 +10,6 @@ export const demoSections: DemoConfig = {
   name: "Home Demo",
   lovelace: demoLovelaceSections,
   entities: demoEntitiesSections,
-  theme: () => ({}),
+  theme: demoSavantTheme,
+  prepare: assignDemoAreas,
 };

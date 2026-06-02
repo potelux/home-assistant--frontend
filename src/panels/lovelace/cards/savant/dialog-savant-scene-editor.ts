@@ -31,12 +31,9 @@ import type { HassDialog } from "../../../../dialogs/make-dialog-manager";
 import { haStyleDialog } from "../../../../resources/styles";
 import type { HomeAssistant } from "../../../../types";
 import { showToast } from "../../../../util/toast";
-import { entityAreaId } from "./savant-services";
 import type { SavantSceneEditorDialogParams } from "./show-dialog-savant-scene-editor";
 
 const WAIT_FOR_SCENE_TIMEOUT = 3000;
-
-type EditorStep = "mode" | "rooms" | "editor";
 
 @customElement("dialog-savant-scene-editor")
 class DialogSavantSceneEditor
@@ -59,26 +56,17 @@ class DialogSavantSceneEditor
 
   @state() private _saving = false;
 
-  @state() private _step: EditorStep = "mode";
-
-  @state() private _selectedAreas: string[] = [];
-
   public showDialog(params: SavantSceneEditorDialogParams): void {
     this._params = params;
     this._open = true;
     this._name = "";
     this._icon = "mdi:palette";
     this._area = params.area;
-    this._selectedAreas = params.area ? [params.area] : [];
     this._entities = params.entities?.length
       ? params.entities
       : params.area
         ? this._areaEntities(params.area, params.hass)
         : [];
-    this._step =
-      params.area || params.entities?.length || params.skip_mode
-        ? "editor"
-        : "mode";
   }
 
   public closeDialog(): boolean {
@@ -101,295 +89,115 @@ class DialogSavantSceneEditor
     }
 
     const hass = this.hass || this._params.hass;
-    const title =
-      this._step === "mode"
-        ? "Create scene"
-        : this._step === "rooms"
-          ? "Capture rooms"
-          : "Create scene";
-
     const canSave =
-      this._step === "editor" &&
       Boolean(this._name.trim()) &&
       this._entities.length > 0 &&
       !this._saving &&
       Boolean(hass.user?.is_admin);
 
-    const canNextRooms =
-      this._step === "rooms" && this._selectedAreas.length > 0 && !this._saving;
-
     return html`
       <ha-dialog
         .open=${this._open}
-        header-title=${title}
+        header-title="Create scene"
         width="large"
         @closed=${this._dialogClosed}
       >
         <div class="content">
-          ${this._step === "mode" ? this._renderModeStep(hass) : nothing}
-          ${this._step === "rooms" ? this._renderRoomsStep(hass) : nothing}
-          ${this._step === "editor" ? this._renderEditorIntro(hass) : nothing}
-          ${this._step === "editor"
-            ? html`
-                <ha-card outlined>
-                  <div class="card-content form">
-                    <ha-input
-                      dialogInitialFocus
-                      .label=${"Scene name"}
-                      .value=${this._name}
-                      required
-                      @input=${this._nameChanged}
-                    ></ha-input>
-                    <ha-icon-picker
-                      .hass=${hass}
-                      .label=${"Icon"}
-                      .value=${this._icon}
-                      @value-changed=${this._iconChanged}
-                    ></ha-icon-picker>
-                    <ha-area-picker
-                      .hass=${hass}
-                      .label=${"Capture room"}
-                      .value=${this._area || ""}
-                      @value-changed=${this._areaChanged}
-                    ></ha-area-picker>
-                  </div>
-                </ha-card>
+          ${hass.user?.is_admin
+            ? nothing
+            : html`
+                <p class="warning">
+                  Only administrators can create persistent scenes.
+                </p>
+              `}
 
-                <ha-card outlined>
-                  <div class="card-content">
-                    <div class="section-header">
-                      <div>
-                        <h3>Captured entities</h3>
-                        <p>
-                          The scene will save the current state and attributes
-                          of these entities.
-                        </p>
-                      </div>
-                      ${this._area
-                        ? html`
-                            <ha-button @click=${this._refreshAreaEntities}>
-                              <ha-svg-icon
-                                slot="icon"
-                                .path=${mdiRefresh}
-                              ></ha-svg-icon>
-                              Capture room
-                            </ha-button>
-                          `
-                        : nothing}
-                    </div>
-                    <ha-entity-picker
-                      .hass=${hass}
-                      .excludeDomains=${SCENE_IGNORED_DOMAINS}
-                      .label=${"Add entity"}
-                      @value-changed=${this._entityPicked}
-                    ></ha-entity-picker>
+          <ha-card outlined>
+            <div class="card-content form">
+              <ha-input
+                dialogInitialFocus
+                .label=${"Scene name"}
+                .value=${this._name}
+                required
+                @input=${this._nameChanged}
+              ></ha-input>
+              <ha-icon-picker
+                .hass=${hass}
+                .label=${"Icon"}
+                .value=${this._icon}
+                @value-changed=${this._iconChanged}
+              ></ha-icon-picker>
+              <ha-area-picker
+                .hass=${hass}
+                .label=${"Room"}
+                .value=${this._area || ""}
+                @value-changed=${this._areaChanged}
+              ></ha-area-picker>
+            </div>
+          </ha-card>
 
-                    ${this._entities.length
-                      ? html`
-                          <mwc-list>
-                            ${this._entities.map((entityId) =>
-                              this._renderEntityRow(hass, entityId)
-                            )}
-                          </mwc-list>
-                        `
-                      : html`
-                          <p class="empty">
-                            Choose a room or add individual entities to capture.
-                          </p>
-                        `}
-                  </div>
-                </ha-card>
-              `
-            : nothing}
+          <ha-card outlined>
+            <div class="card-content">
+              <div class="section-header">
+                <div>
+                  <h3>Captured entities</h3>
+                  <p>Current state of each entity will be saved in the scene.</p>
+                </div>
+                ${this._area
+                  ? html`
+                      <ha-button @click=${this._refreshAreaEntities}>
+                        <ha-svg-icon
+                          slot="icon"
+                          .path=${mdiRefresh}
+                        ></ha-svg-icon>
+                        Capture room
+                      </ha-button>
+                    `
+                  : nothing}
+              </div>
+              <ha-entity-picker
+                .hass=${hass}
+                .excludeDomains=${SCENE_IGNORED_DOMAINS}
+                .label=${"Add entity"}
+                @value-changed=${this._entityPicked}
+              ></ha-entity-picker>
+
+              ${this._entities.length
+                ? html`
+                    <mwc-list>
+                      ${this._entities.map((entityId) =>
+                        this._renderEntityRow(hass, entityId)
+                      )}
+                    </mwc-list>
+                  `
+                : html`
+                    <p class="empty">
+                      Select a room and capture, or add entities manually.
+                    </p>
+                  `}
+            </div>
+          </ha-card>
         </div>
 
         <ha-dialog-footer slot="footer">
           <ha-button
             slot="secondaryAction"
             appearance="plain"
-            @click=${this._footerSecondary}
+            @click=${this.closeDialog}
             .disabled=${this._saving}
           >
-            ${this._step === "mode" ? "Cancel" : "Back"}
+            Cancel
           </ha-button>
-          ${this._step === "mode"
-            ? nothing
-            : this._step === "rooms"
-              ? html`
-                  <ha-button
-                    slot="primaryAction"
-                    @click=${this._captureSelectedRooms}
-                    .disabled=${!canNextRooms}
-                  >
-                    <ha-svg-icon slot="icon" .path=${mdiRefresh}></ha-svg-icon>
-                    Capture
-                  </ha-button>
-                `
-              : html`
-                  <ha-button
-                    slot="primaryAction"
-                    @click=${this._save}
-                    .disabled=${!canSave}
-                  >
-                    <ha-svg-icon
-                      slot="icon"
-                      .path=${mdiContentSave}
-                    ></ha-svg-icon>
-                    ${this._saving ? "Saving..." : "Save scene"}
-                  </ha-button>
-                `}
+          <ha-button
+            slot="primaryAction"
+            @click=${this._save}
+            .disabled=${!canSave}
+          >
+            <ha-svg-icon slot="icon" .path=${mdiContentSave}></ha-svg-icon>
+            ${this._saving ? "Saving..." : "Save scene"}
+          </ha-button>
         </ha-dialog-footer>
       </ha-dialog>
     `;
-  }
-
-  private _renderModeStep(hass: HomeAssistant) {
-    return html`
-      <p class="intro">
-        Choose how to create your scene. Fast Capture matches the Savant App
-        recommended workflow (User Guide §9.2).
-      </p>
-      ${hass.user?.is_admin
-        ? nothing
-        : html`
-            <p class="warning">
-              Only administrators can create persistent scenes.
-            </p>
-          `}
-      <div class="capture-options">
-        <button
-          class="capture-option recommended"
-          data-mode="fast"
-          @click=${this._modeOptionClick}
-          ?disabled=${!hass.user?.is_admin}
-        >
-          <div class="badge">Recommended</div>
-          <h4>Fast Capture</h4>
-          <p>
-            Select rooms and capture the current service settings in each room.
-          </p>
-        </button>
-        <button
-          class="capture-option"
-          data-mode="build"
-          @click=${this._modeOptionClick}
-          ?disabled=${!hass.user?.is_admin}
-        >
-          <h4>Build New Scene</h4>
-          <p>Pick entities and rooms manually for a fully customized scene.</p>
-        </button>
-      </div>
-    `;
-  }
-
-  private _renderRoomsStep(hass: HomeAssistant) {
-    const areaIds = Object.keys(hass.areas).sort((a, b) =>
-      hass.areas[a].name.localeCompare(hass.areas[b].name, hass.language)
-    );
-
-    return html`
-      <p class="intro">
-        Select the rooms to include, then tap Capture to snapshot their current
-        settings (§9.3).
-      </p>
-      <div class="room-check-grid">
-        ${areaIds.map(
-          (areaId) => html`
-            <label
-              class="room-check ${this._selectedAreas.includes(areaId)
-                ? "selected"
-                : ""}"
-            >
-              <input
-                type="checkbox"
-                .checked=${this._selectedAreas.includes(areaId)}
-                data-area-id=${areaId}
-                @change=${this._roomCheckChanged}
-              />
-              <span>${hass.areas[areaId].name}</span>
-            </label>
-          `
-        )}
-      </div>
-    `;
-  }
-
-  private _renderEditorIntro(hass: HomeAssistant) {
-    return html`
-      <p class="intro">
-        Name your scene and review captured entities. Assign a primary room for
-        grouping on the Scenes screen.
-      </p>
-      ${hass.user?.is_admin
-        ? nothing
-        : html`
-            <p class="warning">
-              Only administrators can create persistent scenes.
-            </p>
-          `}
-    `;
-  }
-
-  private _modeOptionClick(ev: Event): void {
-    const mode = (ev.currentTarget as HTMLElement).dataset.mode as
-      | "fast"
-      | "build";
-    this._startMode(mode);
-  }
-
-  private _roomCheckChanged(ev: Event): void {
-    const areaId = (ev.target as HTMLInputElement).dataset.areaId;
-    if (areaId) {
-      this._toggleArea(areaId);
-    }
-  }
-
-  private _startMode(mode: "fast" | "build"): void {
-    if (mode === "fast") {
-      this._step = "rooms";
-      this._selectedAreas = this._params?.area ? [this._params.area] : [];
-      return;
-    }
-    this._step = "editor";
-    this._entities = [];
-    this._area = this._params?.area;
-  }
-
-  private _toggleArea(areaId: string): void {
-    if (this._selectedAreas.includes(areaId)) {
-      this._selectedAreas = this._selectedAreas.filter((id) => id !== areaId);
-    } else {
-      this._selectedAreas = [...this._selectedAreas, areaId];
-    }
-  }
-
-  private _captureSelectedRooms(): void {
-    const hass = this.hass || this._params!.hass;
-    const entitySet = new Set<string>();
-    for (const areaId of this._selectedAreas) {
-      for (const entityId of this._areaEntities(areaId, hass)) {
-        entitySet.add(entityId);
-      }
-    }
-    this._entities = [...entitySet];
-    this._area = this._selectedAreas[0];
-    this._step = "editor";
-  }
-
-  private _footerSecondary(): void {
-    if (this._step === "mode") {
-      this.closeDialog();
-      return;
-    }
-    if (this._step === "rooms") {
-      this._step = "mode";
-      return;
-    }
-    if (this._params?.area) {
-      this.closeDialog();
-      return;
-    }
-    this._step = this._selectedAreas.length ? "rooms" : "mode";
   }
 
   private _renderEntityRow(hass: HomeAssistant, entityId: string) {
@@ -423,9 +231,12 @@ class DialogSavantSceneEditor
       .filter((entityId) => {
         const stateObj = hass.states[entityId];
         const entry = hass.entities[entityId];
+        const entityArea =
+          entry?.area_id ||
+          (entry?.device_id && hass.devices[entry.device_id]?.area_id);
         return (
           stateObj &&
-          entityAreaId(hass, entityId) === areaId &&
+          entityArea === areaId &&
           !entry?.hidden &&
           !entry?.entity_category &&
           !SCENE_IGNORED_DOMAINS.includes(computeDomain(entityId))
@@ -467,7 +278,7 @@ class DialogSavantSceneEditor
 
   private _entityPicked(ev: CustomEvent) {
     const entityId = ev.detail.value;
-    (ev.target as any).value = "";
+    (ev.target as HTMLInputElement & { value: string }).value = "";
     if (!entityId || this._entities.includes(entityId)) {
       return;
     }
@@ -475,7 +286,8 @@ class DialogSavantSceneEditor
   }
 
   private _removeEntity(ev: Event) {
-    const entityId = (ev.currentTarget as any).entityId;
+    const entityId = (ev.currentTarget as HTMLElement & { entityId: string })
+      .entityId;
     this._entities = this._entities.filter((entity) => entity !== entityId);
   }
 
@@ -525,11 +337,20 @@ class DialogSavantSceneEditor
       this._saving = false;
       this.closeDialog();
       this._dialogClosed();
-    } catch (err: any) {
+    } catch (err: unknown) {
       this._saving = false;
-      showToast(this, {
-        message: err?.body?.message || err?.message || "Failed to save scene",
-      });
+      const message =
+        err &&
+        typeof err === "object" &&
+        "body" in err &&
+        err.body &&
+        typeof err.body === "object" &&
+        "message" in err.body
+          ? String((err.body as { message: string }).message)
+          : err instanceof Error
+            ? err.message
+            : "Failed to save scene";
+      showToast(this, { message });
     }
   }
 
@@ -577,7 +398,6 @@ class DialogSavantSceneEditor
           display: grid;
           gap: 16px;
         }
-        .intro,
         .warning,
         .empty,
         h3,
@@ -612,55 +432,6 @@ class DialogSavantSceneEditor
         .empty {
           color: var(--secondary-text-color);
           padding: 16px 0 0;
-        }
-        .capture-options {
-          display: grid;
-          gap: 12px;
-        }
-        .capture-option {
-          background: var(--card-background-color);
-          border: 1px solid var(--divider-color);
-          border-radius: 12px;
-          cursor: pointer;
-          padding: 16px;
-          text-align: left;
-          width: 100%;
-        }
-        .capture-option.recommended {
-          border-color: var(--primary-color);
-        }
-        .capture-option h4 {
-          margin: 0 0 8px;
-        }
-        .capture-option p {
-          color: var(--secondary-text-color);
-          font-size: 14px;
-          margin: 0;
-        }
-        .capture-option .badge {
-          color: var(--primary-color);
-          font-size: 11px;
-          font-weight: 600;
-          letter-spacing: 0.06em;
-          margin-bottom: 6px;
-          text-transform: uppercase;
-        }
-        .room-check-grid {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .room-check {
-          align-items: center;
-          border: 1px solid var(--divider-color);
-          border-radius: 12px;
-          cursor: pointer;
-          display: flex;
-          gap: 12px;
-          padding: 12px 14px;
-        }
-        .room-check.selected {
-          border-color: var(--primary-color);
         }
       `,
     ];

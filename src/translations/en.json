@@ -9934,7 +9934,7 @@
             },
             "savant-scenes": {
               "name": "Savant scenes",
-              "description": "A Savant-style scenes card that can activate scenes and capture new persistent scenes without leaving the dashboard."
+              "description": "Scene list with Savant styling: activate scenes and create new ones from the dashboard (+)."
             },
             "todo-list": {
               "name": "To-do list",

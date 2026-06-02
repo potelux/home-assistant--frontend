@@ -94,18 +94,6 @@ export const coreCards: Card[] = [
     showElement: true,
   },
   {
-    type: "savant-home",
-    showElement: true,
-  },
-  {
-    type: "savant-room",
-    showElement: true,
-  },
-  {
-    type: "savant-rooms",
-    showElement: true,
-  },
-  {
     type: "savant-scenes",
     showElement: true,
   },

@@ -53,6 +53,8 @@ export interface SceneConfig {
   id?: string;
   name: string;
   icon?: string;
+  /** Background image URL for Savant scenes card (stored in scene config). */
+  picture?: string;
   entities: SceneEntities;
   metadata?: SceneMetaData;
 }

@@ -5,6 +5,8 @@ export interface SavantSceneEditorDialogParams {
   hass: HomeAssistant;
   area?: string;
   entities?: string[];
+  /** Existing scene config id (attributes.id) for edit. */
+  sceneId?: string;
 }
 
 const loadDialog = () => import("./dialog-savant-scene-editor");

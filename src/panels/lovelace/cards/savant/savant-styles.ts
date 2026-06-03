@@ -35,6 +35,12 @@ export const savantSceneCardStyles = css`
     text-transform: uppercase;
   }
 
+  .header-actions {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+  }
+
   .icon-btn {
     align-items: center;
     background: rgba(255, 255, 255, 0.08);
@@ -48,65 +54,64 @@ export const savantSceneCardStyles = css`
     width: 36px;
   }
 
+  .icon-btn.active {
+    background: var(--savant-accent);
+    border-color: var(--savant-accent);
+    color: #1c1c1e;
+  }
+
   .icon-btn:disabled {
     cursor: default;
     opacity: 0.4;
   }
 
-  .strips {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+  .scene-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    padding: 8px 16px 20px;
   }
 
-  .scene-strip {
-    border: none;
-    cursor: pointer;
-    display: block;
-    margin: 0;
-    min-height: 120px;
-    overflow: hidden;
-    padding: 0;
+  .scene-tile {
+    min-height: 140px;
     position: relative;
-    text-align: center;
-    width: 100%;
   }
 
-  .scene-strip .overlay {
-    align-items: center;
-    background: linear-gradient(
-      180deg,
-      rgba(0, 0, 0, 0.2) 0%,
-      rgba(0, 0, 0, 0.55) 100%
-    );
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-    inset: 0;
-    justify-content: center;
-    padding: 20px;
-    position: absolute;
+  .scene-tile hui-card {
+    display: block;
+    height: 100%;
   }
 
-  .scene-strip .name {
-    font-size: 22px;
-    font-weight: 400;
+  .scene-tile hui-card ha-card {
+    height: 100%;
     margin: 0;
   }
 
-  .scene-strip .meta {
-    font-size: 14px;
-    margin: 6px 0 0;
-    opacity: 0.8;
+  .scene-actions {
+    bottom: 8px;
+    display: flex;
+    gap: 6px;
+    position: absolute;
+    right: 8px;
+    z-index: 2;
+  }
+
+  .scene-actions .icon-btn {
+    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.55);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    height: 32px;
+    width: 32px;
   }
 
   .section-label {
     color: var(--savant-text-muted);
     font-size: 11px;
     font-weight: 600;
+    grid-column: 1 / -1;
     letter-spacing: 0.1em;
-    margin: 12px 0 6px;
-    padding: 0 20px;
+    margin: 8px 0 0;
     text-transform: uppercase;
   }
 

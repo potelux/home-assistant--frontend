@@ -57,6 +57,7 @@ export const mockScene = (hass: MockHomeAssistant) => {
           friendly_name: config.name,
           icon: config.icon,
           id,
+          ...(config.picture ? { entity_picture: config.picture } : {}),
         },
       });
 

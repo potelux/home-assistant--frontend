@@ -95,7 +95,7 @@ export class HaPictureUpload extends LitElement {
     return html`<div class="center-vertical">
       <div class="value">
         <img
-          .src=${this.value}
+          .src=${this.hass.hassUrl(this.value)}
           alt=${this.currentImageAltText ||
           this.hass.localize("ui.components.picture-upload.current_image_alt")}
         />

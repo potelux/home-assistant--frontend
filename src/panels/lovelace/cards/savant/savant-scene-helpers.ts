@@ -57,11 +57,12 @@ export const sceneFallbackGradient = (entityId: string): string =>
 export const buildPictureEntitySceneCardConfig = (
   scene: SceneEntity,
   sceneConfigs: Record<string, SceneConfig | null | undefined>,
-  editMode: boolean
+  editMode: boolean,
+  pictureUrl = scenePictureUrl(scene, sceneConfigs)
 ): PictureEntityCardConfig => ({
   type: "picture-entity",
   entity: scene.entity_id,
-  image: scenePictureUrl(scene, sceneConfigs),
+  image: pictureUrl,
   show_name: true,
   show_state: false,
   tap_action: editMode
@@ -72,11 +73,12 @@ export const buildPictureEntitySceneCardConfig = (
 export const buildPictureGlanceSceneCardConfig = (
   scene: SceneEntity,
   sceneConfigs: Record<string, SceneConfig | null | undefined>,
-  editMode: boolean
+  editMode: boolean,
+  pictureUrl = scenePictureUrl(scene, sceneConfigs)
 ): PictureGlanceCardConfig => ({
   type: "picture-glance",
   title: computeStateName(scene),
-  image: scenePictureUrl(scene, sceneConfigs),
+  image: pictureUrl,
   entities: [scene.entity_id],
   tap_action: editMode
     ? { action: "none" }

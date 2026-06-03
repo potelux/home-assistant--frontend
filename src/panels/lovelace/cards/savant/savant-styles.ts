@@ -73,7 +73,8 @@ export const savantSceneCardStyles = css`
   }
 
   .scene-tile {
-    min-height: 140px;
+    min-height: 160px;
+    overflow: visible;
     position: relative;
   }
 
@@ -88,12 +89,13 @@ export const savantSceneCardStyles = css`
   }
 
   .scene-actions {
-    bottom: 8px;
+    bottom: 10px;
     display: flex;
     gap: 6px;
+    pointer-events: auto;
     position: absolute;
-    right: 8px;
-    z-index: 2;
+    right: 10px;
+    z-index: 10;
   }
 
   .scene-actions .icon-btn {

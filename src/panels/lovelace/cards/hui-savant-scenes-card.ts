@@ -1,6 +1,7 @@
 import { mdiDelete, mdiPencil, mdiPlus } from "@mdi/js";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
+import memoizeOne from "memoize-one";
 import { computeDomain } from "../../../common/entity/compute_domain";
 import { computeStateName } from "../../../common/entity/compute_state_name";
 import "../../../components/ha-card";
@@ -14,10 +15,13 @@ import type { LovelaceCard, LovelaceGridOptions } from "../types";
 import {
   buildPictureEntitySceneCardConfig,
   buildPictureGlanceSceneCardConfig,
+  scenePictureUrl,
 } from "./savant/savant-scene-helpers";
 import { showSavantSceneEditorDialog } from "./savant/show-dialog-savant-scene-editor";
 import { savantSceneCardStyles } from "./savant/savant-styles";
 import "./hui-card";
+import "./hui-picture-entity-card";
+import "./hui-picture-glance-card";
 
 export interface SavantScenesCardConfig extends LovelaceCardConfig {
   type: "savant-scenes";
@@ -38,6 +42,28 @@ export class HuiSavantScenesCard extends LitElement implements LovelaceCard {
   @state() private _editMode = false;
 
   private _sceneConfigs: Record<string, SceneConfig | null> = {};
+
+  private _memoizedCardConfig = memoizeOne(
+    (
+      pictureUrl: string,
+      editMode: boolean,
+      cardType: "picture-entity" | "picture-glance",
+      scene: SceneEntity
+    ) =>
+      cardType === "picture-glance"
+        ? buildPictureGlanceSceneCardConfig(
+            scene,
+            this._sceneConfigs,
+            editMode,
+            pictureUrl
+          )
+        : buildPictureEntitySceneCardConfig(
+            scene,
+            this._sceneConfigs,
+            editMode,
+            pictureUrl
+          )
+  );
 
   public static getStubConfig(): SavantScenesCardConfig {
     return {
@@ -170,10 +196,24 @@ export class HuiSavantScenesCard extends LitElement implements LovelaceCard {
   }
 
   private _renderSceneTile(scene: SceneEntity) {
-    const cardConfig = this._sceneCardConfig(scene);
+    const cardType =
+      this._config?.scene_card_type === "picture-glance"
+        ? "picture-glance"
+        : "picture-entity";
+    const pictureUrl = scenePictureUrl(scene, this._sceneConfigs);
+    const cardConfig = this._memoizedCardConfig(
+      pictureUrl,
+      this._editMode,
+      cardType,
+      scene
+    );
     return html`
       <div class="scene-tile">
-        <hui-card .hass=${this.hass} .config=${cardConfig}></hui-card>
+        <hui-card
+          .hass=${this.hass}
+          .config=${cardConfig}
+          .layout=${"grid"}
+        ></hui-card>
         ${this._editMode && scene.attributes.id
           ? html`
               <div class="scene-actions">
@@ -198,22 +238,6 @@ export class HuiSavantScenesCard extends LitElement implements LovelaceCard {
           : nothing}
       </div>
     `;
-  }
-
-  private _sceneCardConfig(scene: SceneEntity): LovelaceCardConfig {
-    const useGlance = this._config?.scene_card_type === "picture-glance";
-    if (useGlance) {
-      return buildPictureGlanceSceneCardConfig(
-        scene,
-        this._sceneConfigs,
-        this._editMode
-      );
-    }
-    return buildPictureEntitySceneCardConfig(
-      scene,
-      this._sceneConfigs,
-      this._editMode
-    );
   }
 
   private _sceneArea(scene: SceneEntity): string | undefined {

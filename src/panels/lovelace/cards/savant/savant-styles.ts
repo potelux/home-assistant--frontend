@@ -65,11 +65,18 @@ export const savantSceneCardStyles = css`
     opacity: 0.4;
   }
 
+  /* Phone: one scene per row; tablet/desktop: two per row (half width each). */
   .scene-grid {
     display: grid;
     gap: 12px;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: 1fr;
     padding: 8px 16px 20px;
+  }
+
+  @media (min-width: 600px) {
+    .scene-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   .scene-tile {

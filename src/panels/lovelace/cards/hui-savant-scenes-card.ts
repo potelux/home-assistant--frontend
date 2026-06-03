@@ -77,14 +77,13 @@ export class HuiSavantScenesCard extends LitElement implements LovelaceCard {
   public getGridOptions(): LovelaceGridOptions {
     return {
       columns: 12,
-      min_columns: 6,
-      rows: 4,
-      min_rows: 3,
+      min_columns: 12,
+      rows: "auto",
     };
   }
 
   public getCardSize(): number {
-    return 6;
+    return 3;
   }
 
   public setConfig(config: SavantScenesCardConfig): void {

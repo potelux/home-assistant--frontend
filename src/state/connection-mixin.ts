@@ -37,6 +37,7 @@ import {
   fetchAndScheduleBrandsAccessToken,
 } from "../util/brands-url";
 import { getLocalLanguage } from "../util/common-translation";
+import { devHassBaseUrl } from "../util/dev-hass-url";
 import { fetchWithAuth } from "../util/fetch-with-auth";
 import { getState } from "../util/ha-pref-storage";
 import hassCallApi, { hassCallApiRaw } from "../util/hass-call-api";
@@ -88,11 +89,10 @@ export const connectionMixin = <T extends Constructor<HassBaseEl>>(
         debugConnection: __DEV__,
         suspendWhenHidden: true,
         enableShortcuts: true,
-        hassUrl: (path = "") =>
-          addBrandsAuth(
-            new URL(path, auth.data.hassUrl).toString(),
-            auth.data.hassUrl
-          ),
+        hassUrl: (path = "") => {
+          const baseUrl = devHassBaseUrl(auth.data.hassUrl);
+          return addBrandsAuth(new URL(path, baseUrl).toString(), baseUrl);
+        },
         callService: async (
           domain,
           service,
@@ -176,7 +176,12 @@ export const connectionMixin = <T extends Constructor<HassBaseEl>>(
         fetchWithAuth: (
           path: string,
           init: Parameters<typeof fetchWithAuth>[2]
-        ) => fetchWithAuth(auth, `${auth.data.hassUrl}${path}`, init),
+        ) =>
+          fetchWithAuth(
+            auth,
+            `${devHassBaseUrl(auth.data.hassUrl)}${path}`,
+            init
+          ),
         // For messages that do not get a response
         sendWS: (msg) => {
           if (this.hass?.debugConnection) {

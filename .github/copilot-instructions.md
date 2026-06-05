@@ -461,9 +461,16 @@ The VM may ship with Node 22 at `/exec-daemon/node`, but this repo requires **No
 
 `yarn lint:types` expects `build/translations/translationMetadata.json` (produced by the translation gulp tasks during `build-app` or `build-translations`).
 
-### Running the UI without Home Assistant Core
+### Demo vs Home Assistant Core
 
-The **public demo** is the simplest end-to-end UI in this repo (mocked backend, no Core):
+| URL                                                  | What it is                                                                                                   |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `http://localhost:8090` (`demo/script/develop_demo`) | **Frontend-only demo** (`ha-demo`). No Core; many APIs are mocked (image upload may show "Not implemented"). |
+| `http://localhost:8123`                              | **Real Home Assistant Core** when started with `script/run_ha_core.sh`.                                      |
+
+Use Core for real scene config, image upload, media browser, and more-info.
+
+### Running the UI without Home Assistant Core (demo)
 
 ```bash
 export SKIP_FETCH_NIGHTLY_TRANSLATIONS=1   # avoids interactive GitHub device auth for nightly translations
@@ -472,11 +479,27 @@ demo/script/develop_demo                 # http://localhost:8090
 
 `develop-demo` enables `translations-enable-merge-backend`, which can otherwise block on GitHub OAuth when no `GITHUB_TOKEN` is set.
 
-### Full frontend development (requires Core)
+### Start Home Assistant Core (Docker)
 
-- `script/develop` — watch build into `hass_frontend/`; point a running Home Assistant instance at this repo via `frontend.development_repo`
-- `script/develop_and_serve` — build and serve on port **8124** while Core runs on **8123**
-- Devcontainer: `script/core` starts Core; see `.devcontainer/devcontainer.json` for port mapping
+```bash
+./script/run_ha_core.sh
+```
+
+In another terminal:
+
+```bash
+HASS_URL=http://127.0.0.1:8123 ./script/develop
+```
+
+Open **http://127.0.0.1:8123/** (Core uses `frontend.development_repo: /workspace` in `config/configuration.yaml`).
+
+- `script/develop_and_serve` — frontend on **8124**, API on **8123**
+- Devcontainer: `script/core` (requires `DEVCONTAINER=1`)
+- Docker: `sudo chmod 666 /var/run/docker.sock` if needed
+- Onboarding: http://127.0.0.1:8123/ — this VM may use **dev** / **devpassword123** (development only)
+- Dev dashboard with `savant-scenes`: http://127.0.0.1:8123/dashboard-dev/dev (seeded from `development/lovelace/dashboard_dev.storage.json`)
+- Use **127.0.0.1** consistently in the browser (not `localhost`) when testing Core; dev builds also normalize `localhost` ↔ `127.0.0.1` for API/image uploads.
+- Savant scene tile background images are stored in browser `localStorage` (`savant_scene_pictures_v1`), not in the Core scene config API.
 
 ### Other dev servers (optional)
 

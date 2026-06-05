@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "lovelace.dashboard_dev",
+  "data": {
+    "config": {
+      "views": [
+        {
+          "title": "dev",
+          "path": "dev",
+          "type": "sections",
+          "icon": "mdi:test-tube",
+          "sections": [
+            {
+              "type": "grid",
+              "cards": [
+                {
+                  "type": "heading",
+                  "heading": "Scenes",
+                  "icon": "mdi:palette"
+                },
+                {
+                  "type": "savant-scenes",
+                  "title": "Scenes",
+                  "show_create": true,
+                  "group_by_area": true,
+                  "scene_card_type": "picture-entity",
+                  "grid_options": {
+                    "columns": 12
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

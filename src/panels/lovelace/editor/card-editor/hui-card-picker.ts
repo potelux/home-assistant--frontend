@@ -64,6 +64,8 @@ export class HuiCardPicker extends LitElement {
 
   @query("ha-input-search") private _searchInput?: HTMLElement;
 
+  @query("#content") private _content?: HTMLElement;
+
   private _unusedEntities?: string[];
 
   private _usedEntities?: string[];
@@ -287,9 +289,8 @@ export class HuiCardPicker extends LitElement {
   protected updated(changedProps: PropertyValues) {
     super.updated(changedProps);
     if (changedProps.has("_filter")) {
-      const div = this.parentElement!.shadowRoot!.getElementById("content");
-      if (div) {
-        div.scrollTo({ behavior: "auto", top: 0 });
+      if (this._content) {
+        this._content.scrollTo({ behavior: "auto", top: 0 });
       }
     }
   }

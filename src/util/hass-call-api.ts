@@ -1,4 +1,5 @@
 import type { Auth } from "home-assistant-js-websocket";
+import { devHassBaseUrl } from "./dev-hass-url";
 import { fetchWithAuth } from "./fetch-with-auth";
 
 export const handleFetchPromise = async <T>(
@@ -52,7 +53,8 @@ export default async function hassCallApi<T>(
   parameters?: Record<string, unknown>,
   headers?: Record<string, string>
 ) {
-  const url = `${auth.data.hassUrl}/api/${path}`;
+  const baseUrl = devHassBaseUrl(auth.data.hassUrl);
+  const url = `${baseUrl}/api/${path}`;
 
   const init: RequestInit = {
     method,
@@ -76,7 +78,8 @@ export async function hassCallApiRaw(
   headers?: Record<string, string>,
   signal?: AbortSignal
 ) {
-  const url = `${auth.data.hassUrl}/api/${path}`;
+  const baseUrl = devHassBaseUrl(auth.data.hassUrl);
+  const url = `${baseUrl}/api/${path}`;
 
   const init: RequestInit = {
     method,

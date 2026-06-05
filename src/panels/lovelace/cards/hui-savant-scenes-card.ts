@@ -17,6 +17,7 @@ import {
   buildPictureGlanceSceneCardConfig,
   scenePictureUrl,
 } from "./savant/savant-scene-helpers";
+import { removeSavantScenePicture } from "./savant/savant-scene-pictures";
 import { showSavantSceneEditorDialog } from "./savant/show-dialog-savant-scene-editor";
 import { savantSceneCardStyles } from "./savant/savant-styles";
 import "./hui-card";
@@ -336,6 +337,7 @@ export class HuiSavantScenesCard extends LitElement implements LovelaceCard {
   private async _deleteScene(sceneId: string): Promise<void> {
     await deleteScene(this.hass, sceneId);
     delete this._sceneConfigs[sceneId];
+    removeSavantScenePicture(sceneId);
     this.requestUpdate();
   }
 

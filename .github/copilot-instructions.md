@@ -498,6 +498,8 @@ Open **http://127.0.0.1:8123/** (Core uses `frontend.development_repo: /workspac
 - Docker: `sudo chmod 666 /var/run/docker.sock` if needed
 - Onboarding: http://127.0.0.1:8123/ — this VM may use **dev** / **devpassword123** (development only)
 - Dev dashboard with `savant-scenes`: http://127.0.0.1:8123/dashboard-dev/dev (seeded from `development/lovelace/dashboard_dev.storage.json`)
+- Use **127.0.0.1** consistently in the browser (not `localhost`) when testing Core; dev builds also normalize `localhost` ↔ `127.0.0.1` for API/image uploads.
+- Savant scene tile background images are stored in browser `localStorage` (`savant_scene_pictures_v1`), not in the Core scene config API.
 
 ### Other dev servers (optional)
 

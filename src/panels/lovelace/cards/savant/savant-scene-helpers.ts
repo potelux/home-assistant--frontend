@@ -5,6 +5,7 @@ import type {
   PictureEntityCardConfig,
   PictureGlanceCardConfig,
 } from "../types";
+import { getSavantScenePicture } from "./savant-scene-pictures";
 import { sceneBackground } from "./savant-styles";
 
 const DEFAULT_SCENE_IMAGE =
@@ -15,9 +16,15 @@ export const scenePictureUrl = (
   sceneConfigs: Record<string, SceneConfig | null | undefined>
 ): string => {
   const sceneId = scene.attributes.id;
-  const fromConfig = sceneId ? sceneConfigs[sceneId]?.picture : undefined;
-  if (fromConfig) {
-    return fromConfig;
+  if (sceneId) {
+    const fromStorage = getSavantScenePicture(sceneId);
+    if (fromStorage) {
+      return fromStorage;
+    }
+    const fromConfig = sceneConfigs[sceneId]?.picture;
+    if (fromConfig) {
+      return fromConfig;
+    }
   }
   return DEFAULT_SCENE_IMAGE;
 };

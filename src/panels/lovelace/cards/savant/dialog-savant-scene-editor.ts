@@ -48,6 +48,10 @@ import type { HassDialog } from "../../../../dialogs/make-dialog-manager";
 import { haStyleDialog } from "../../../../resources/styles";
 import type { HomeAssistant } from "../../../../types";
 import { showToast } from "../../../../util/toast";
+import {
+  getSavantScenePicture,
+  setSavantScenePicture,
+} from "./savant-scene-pictures";
 import type { SavantSceneEditorDialogParams } from "./show-dialog-savant-scene-editor";
 
 const WAIT_FOR_SCENE_TIMEOUT = 3000;
@@ -193,7 +197,8 @@ class DialogSavantSceneEditor
       const config = await getSceneConfig(hass, sceneId);
       this._name = config.name;
       this._icon = config.icon || "mdi:palette";
-      this._picture = config.picture || null;
+      this._picture =
+        getSavantScenePicture(sceneId) || config.picture || null;
       this._initEntitiesFromConfig(config, hass);
       if (!this._area) {
         const sceneEntity = this._findSceneEntity(hass, sceneId);
@@ -218,7 +223,6 @@ class DialogSavantSceneEditor
   private _initEntitiesFromConfig(config: SceneConfig, hass: HomeAssistant) {
     this._entities = Object.keys(config.entities || {});
     this._singleEntities = [];
-    this._devices = [];
 
     if (config.metadata) {
       Object.keys(config.entities).forEach((entityId) => {
@@ -228,18 +232,21 @@ class DialogSavantSceneEditor
       });
     }
 
-    const newDevices: string[] = [];
+    this._syncDevicesFromEntities(hass);
+  }
+
+  private _syncDevicesFromEntities(hass: HomeAssistant): void {
+    const devices: string[] = [];
     for (const entityId of this._entities) {
       const entry = hass.entities[entityId];
-      if (!entry?.device_id) {
+      if (!entry?.device_id || this._singleEntities.includes(entityId)) {
         continue;
       }
-      const entityMeta = config.metadata?.[entityId];
-      if (!newDevices.includes(entry.device_id) && !entityMeta?.entity_only) {
-        newDevices.push(entry.device_id);
+      if (!devices.includes(entry.device_id)) {
+        devices.push(entry.device_id);
       }
     }
-    this._devices = newDevices;
+    this._devices = devices;
   }
 
   private _buildDeviceEntityLookup(hass: HomeAssistant): DeviceEntitiesLookup {
@@ -247,7 +254,7 @@ class DialogSavantSceneEditor
     for (const entry of Object.values(hass.entities)) {
       if (
         !entry.device_id ||
-        entry.hidden_by ||
+        entry.hidden ||
         entry.entity_category ||
         SCENE_IGNORED_DOMAINS.includes(computeDomain(entry.entity_id))
       ) {
@@ -619,8 +626,8 @@ class DialogSavantSceneEditor
         }
       });
       this._entities = newEntities;
-      this._devices = [];
       this._singleEntities = [];
+      this._syncDevicesFromEntities(hass);
     }
   }
 
@@ -636,8 +643,17 @@ class DialogSavantSceneEditor
       }
     });
     this._entities = newEntities;
-    this._devices = [];
     this._singleEntities = [];
+    this._syncDevicesFromEntities(hass);
+    if (!newEntities.length) {
+      showToast(this, {
+        message: "No entities found in this room to capture.",
+      });
+    } else {
+      showToast(this, {
+        message: `Captured ${newEntities.length} entities from the room.`,
+      });
+    }
   }
 
   private _entityPicked(ev: CustomEvent) {
@@ -666,14 +682,25 @@ class DialogSavantSceneEditor
       return;
     }
     const hass = this.hass || this._params!.hass;
-    this._devices = [...this._devices, deviceId];
+    this._deviceEntityLookup = this._buildDeviceEntityLookup(hass);
     const deviceEntities = this._deviceEntityLookup[deviceId];
-    if (!deviceEntities) {
+    if (!deviceEntities?.length) {
+      showToast(this, {
+        message:
+          "This device has no entities that can be added to a scene. Add entities individually instead.",
+      });
       return;
     }
     const added = deviceEntities.filter(
       (entityId) => !this._entities.includes(entityId)
     );
+    if (!added.length) {
+      showToast(this, {
+        message: "All entities from this device are already in the scene.",
+      });
+      return;
+    }
+    this._devices = [...this._devices, deviceId];
     this._entities = [...this._entities, ...added];
     added.forEach((entityId) => this._storeState(hass, entityId));
   }
@@ -748,19 +775,18 @@ class DialogSavantSceneEditor
     }
 
     const id = this._sceneId || `${Date.now()}`;
+    const metadata = this._calculateMetaData();
     const config: SceneConfig = {
       name: this._name.trim(),
       icon: this._icon,
       entities: this._calculateStates(hass),
-      metadata: this._calculateMetaData(),
+      ...(Object.keys(metadata).length ? { metadata } : {}),
     };
-    if (this._picture) {
-      config.picture = this._picture;
-    }
 
     try {
       this._saving = true;
       await saveScene(hass, id, config);
+      setSavantScenePicture(id, this._picture);
       if (this._area) {
         await this._assignSceneArea(hass, id, this._area);
       }

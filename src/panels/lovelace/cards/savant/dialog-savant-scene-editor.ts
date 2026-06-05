@@ -197,8 +197,7 @@ class DialogSavantSceneEditor
       const config = await getSceneConfig(hass, sceneId);
       this._name = config.name;
       this._icon = config.icon || "mdi:palette";
-      this._picture =
-        getSavantScenePicture(sceneId) || config.picture || null;
+      this._picture = getSavantScenePicture(sceneId) || config.picture || null;
       this._initEntitiesFromConfig(config, hass);
       if (!this._area) {
         const sceneEntity = this._findSceneEntity(hass, sceneId);
@@ -787,6 +786,11 @@ class DialogSavantSceneEditor
       this._saving = true;
       await saveScene(hass, id, config);
       setSavantScenePicture(id, this._picture);
+      try {
+        await hass.callService("scene", "reload");
+      } catch {
+        // Older cores may not expose reload; entity still appears after restart.
+      }
       if (this._area) {
         await this._assignSceneArea(hass, id, this._area);
       }

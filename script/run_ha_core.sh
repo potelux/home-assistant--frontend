@@ -68,12 +68,22 @@ default_config:
 frontend:
   development_repo: ${ROOT}
 
+# Required so scenes saved via the config API appear as scene.* entities
+scene: !include scenes.yaml
+
 logger:
   default: info
   logs:
     homeassistant.components.frontend: debug
 EOF
     echo "Wrote ${CONFIG_DIR}/configuration.yaml"
+  elif ! grep -q '!include scenes.yaml' "${CONFIG_DIR}/configuration.yaml" 2>/dev/null; then
+    printf '\n# Required so scenes saved via the config API appear as scene.* entities\nscene: !include scenes.yaml\n' >>"${CONFIG_DIR}/configuration.yaml"
+    echo "Added scene: !include scenes.yaml to configuration.yaml"
+  fi
+  if [ ! -f "${CONFIG_DIR}/scenes.yaml" ]; then
+    echo "[]" >"${CONFIG_DIR}/scenes.yaml"
+    echo "Created empty scenes.yaml"
   fi
 }
 

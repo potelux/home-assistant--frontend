@@ -29,6 +29,36 @@ ensure_docker() {
   fi
 }
 
+seed_dev_dashboard() {
+  mkdir -p "${CONFIG_DIR}/.storage"
+  local dashboard_file="${CONFIG_DIR}/.storage/lovelace.dashboard_dev"
+  local dashboards_file="${CONFIG_DIR}/.storage/lovelace_dashboards"
+  local template_dashboard="${ROOT}/development/lovelace/dashboard_dev.storage.json"
+  local template_dashboards="${ROOT}/development/lovelace/lovelace_dashboards.storage.json"
+
+  copy_storage_file() {
+    local src="$1"
+    local dest="$2"
+    if [ -w "$(dirname "${dest}")" ]; then
+      cp "${src}" "${dest}"
+    else
+      sudo cp "${src}" "${dest}"
+      sudo chown "$(id -u):$(id -g)" "${dest}" 2>/dev/null || true
+    fi
+  }
+
+  if [ -f "${template_dashboard}" ]; then
+    if [ ! -f "${dashboard_file}" ] || grep -q '"heading": "New section"' "${dashboard_file}" 2>/dev/null; then
+      copy_storage_file "${template_dashboard}" "${dashboard_file}"
+      echo "Seeded dev Lovelace dashboard with savant-scenes card."
+    fi
+  fi
+  if [ -f "${template_dashboards}" ] && [ ! -f "${dashboards_file}" ]; then
+    copy_storage_file "${template_dashboards}" "${dashboards_file}"
+    echo "Registered dev dashboard in sidebar."
+  fi
+}
+
 write_config() {
   mkdir -p "${CONFIG_DIR}"
   if [ ! -f "${CONFIG_DIR}/configuration.yaml" ]; then
@@ -82,6 +112,7 @@ print_status() {
     echo "Or use the API flow documented in AGENTS.md (Cloud Agent section)."
   else
     echo "Core API is up. If this environment was auto-onboarded, try login: dev / devpassword123"
+    echo "Dev dashboard (savant-scenes): http://127.0.0.1:8123/dashboard-dev/dev"
   fi
   echo ""
   echo "Logs: docker logs -f ${CONTAINER_NAME}"
@@ -89,6 +120,7 @@ print_status() {
 
 ensure_docker
 write_config
+seed_dev_dashboard
 start_core
 wait_for_api
 print_status
